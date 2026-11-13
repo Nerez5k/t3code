@@ -2,18 +2,16 @@ import { useState } from "react";
 import { useScopedSettings, useUpdateScopedSettings } from "../settings/useScopedSettings";
 import { SettingsSection, SettingsRow } from "../settings/settingsLayout";
 import { Switch } from "../ui/switch";
-import { BackgroundCanvas, uploadBackground, useLocalBackgrounds } from "./Background";
+import { BackgroundCanvas, uploadBackground } from "./Background";
 import { PRESETS } from "./asciiBackground";
 
 export function BackgroundSettings() {
   const settings = useScopedSettings();
   const update = useUpdateScopedSettings();
   const [error, setError] = useState("");
-  const images = useLocalBackgrounds();
   const choices: ReadonlyArray<{ id: string; label: string; image: boolean }> = [
     { id: "none", label: "None", image: false },
     ...PRESETS.map((id) => ({ id, label: id.charAt(0).toUpperCase() + id.slice(1), image: false })),
-    ...images.map((entry) => ({ id: entry.id, label: entry.label, image: true })),
     { id: "upload", label: "Your image", image: true },
   ];
   return (

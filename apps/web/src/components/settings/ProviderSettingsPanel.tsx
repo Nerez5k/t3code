@@ -737,12 +737,10 @@ export function EnvironmentProviderSettings({
     const explicitInstance = settings.providerInstances?.[defaultInstanceId];
     const isDirty = explicitInstance !== undefined;
     const hasDefaultSlot = providerSettings.hasDefaultInstance || explicitInstance !== undefined;
+    // A switched-off default slot stays out of the list; "+" adds the provider back.
     if (
       hasDefaultSlot &&
-      (driver === "codex" ||
-        driver === "claudeAgent" ||
-        isDirty ||
-        resolveProviderInstanceEnabled(explicitInstance ?? { driver }) ||
+      (resolveProviderInstanceEnabled(explicitInstance ?? { driver }) ||
         defaultInstanceId === targetInstanceId)
     ) {
       rows.push({

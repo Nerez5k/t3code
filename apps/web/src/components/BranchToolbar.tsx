@@ -703,7 +703,8 @@ export const BranchToolbar = memo(function BranchToolbar({
             environmentId={environmentId}
             availableEnvironments={availableEnvironments}
             showEnvironmentPicker={showEnvironmentPicker}
-            showEnvironmentIndicator={activeEnvironmentOption !== null}
+            // One machine needs no name in the panel; the composer strip already shows it.
+            showEnvironmentIndicator={activeEnvironmentOption !== null && hasMultipleEnvironments}
             onEnvironmentChange={onEnvironmentChange}
             effectiveEnvMode={effectiveEnvMode}
             activeWorktreePath={activeWorktreePath}

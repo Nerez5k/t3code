@@ -52,5 +52,3 @@ node_modules/
 
 /packages/ssh/.ssh-launcher-test-*/
 
-# Personal background images (not redistributable)
-apps/web/public/backgrounds-local/

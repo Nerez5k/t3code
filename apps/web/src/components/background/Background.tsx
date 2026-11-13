@@ -15,43 +15,10 @@ const IMAGE_KEY = "t3code:background-image";
 const IMAGE_EVENT = "t3code:background-image-change";
 /** Width of the text column the scrim protects, matching the timeline's reading width. */
 const COLUMN_WIDTH = 820;
-/** 20 fps: smooth enough for slow waves, light on battery. */
-const FRAME_MS = 1000 / 20;
+/** 15 fps is enough for slow waves; each frame costs a few ms of one core. */
+const FRAME_MS = 1000 / 15;
 /** How often a moving background re-measures the text scrim. */
 const REPORT_MS = 2500;
-
-export interface LocalBackground {
-  readonly id: string;
-  readonly label: string;
-  readonly src: string;
-  readonly thumb: string;
-}
-
-let localBackgrounds: Promise<ReadonlyArray<LocalBackground>> | undefined;
-
-/** Images in public/backgrounds-local (kept out of git), listed by its manifest. */
-function loadLocalBackgrounds(): Promise<ReadonlyArray<LocalBackground>> {
-  localBackgrounds ??= fetch("/backgrounds-local/manifest.json")
-    .then((response) => (response.ok ? response.json() : []))
-    .then((list: unknown) => (Array.isArray(list) ? (list as LocalBackground[]) : []))
-    .catch(() => []);
-  return localBackgrounds;
-}
-
-export function useLocalBackgrounds(): ReadonlyArray<LocalBackground> {
-  const [list, setList] = useState<ReadonlyArray<LocalBackground>>([]);
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- the manifest is a static file read once
-  useEffect(() => {
-    let live = true;
-    void loadLocalBackgrounds().then((value) => {
-      if (live) setList(value);
-    });
-    return () => {
-      live = false;
-    };
-  }, []);
-  return list;
-}
 
 function subscribeImage(listener: () => void) {
   window.addEventListener(IMAGE_EVENT, listener);
@@ -84,10 +51,8 @@ export async function uploadBackground(file: File): Promise<void> {
   }
 }
 
-function imageSourceFor(preset: string, upload: string | null, thumb: boolean): string | null {
-  if (preset === "upload") return upload;
-  if (preset === "none" || isProceduralPreset(preset)) return null;
-  return `/backgrounds-local/${preset}${thumb ? ".thumb" : ""}.jpg`;
+function imageSourceFor(preset: string, upload: string | null): string | null {
+  return preset === "upload" ? upload : null;
 }
 
 /** Paints a preset or image; `onPainted` gets the canvas once its bitmap is ready. */
@@ -109,7 +74,7 @@ export function BackgroundCanvas({
   const ref = useRef<HTMLCanvasElement>(null);
   const { resolvedTheme } = useTheme();
   const upload = useSyncExternalStore(subscribeImage, readImage, () => null);
-  const src = imageSourceFor(preset, upload, thumbnail);
+  const src = imageSourceFor(preset, upload);
   // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- Owns the canvas bitmap and its animation loop for this source and size.
   useEffect(() => {
     const canvas = ref.current;
@@ -215,6 +180,13 @@ export function BackgroundCanvas({
  */
 export function ChatBackground({ hero }: { hero: boolean }) {
   const settings = useClientSettings();
+  // Presets from removed image sets fall back to Glow.
+  const preset =
+    settings.backgroundPreset === "none" ||
+    settings.backgroundPreset === "upload" ||
+    isProceduralPreset(settings.backgroundPreset)
+      ? settings.backgroundPreset
+      : "glow";
   const hostRef = useRef<HTMLDivElement>(null);
   const [scrimState, setScrimState] = useState({ key: "", alpha: 0.6 });
   const opacity = settings.backgroundIntensity / 100;
@@ -227,8 +199,7 @@ export function ChatBackground({ hero }: { hero: boolean }) {
   ].join("|");
   // A moving pattern can bring brighter cells into the column, so the shade only grows per setup.
   const scrim = scrimState.key === scrimKey ? scrimState.alpha : 0.6;
-  const enabled =
-    settings.backgroundPreset !== "none" && (hero || settings.backgroundShowInThreads);
+  const enabled = preset !== "none" && (hero || settings.backgroundShowInThreads);
 
   const measure = (canvas: HTMLCanvasElement) => {
     const host = hostRef.current?.parentElement;
@@ -271,8 +242,14 @@ export function ChatBackground({ hero }: { hero: boolean }) {
     >
       <div className="absolute inset-0" style={{ opacity }}>
         <BackgroundCanvas
-          preset={settings.backgroundPreset}
-          style={settings.backgroundStyle}
+          preset={preset}
+          style={
+            preset === "upload"
+              ? settings.backgroundStyle
+              : settings.backgroundStyle === "original"
+                ? "ascii"
+                : settings.backgroundStyle
+          }
           cellSize={settings.backgroundCellSize}
           animate={settings.backgroundAnimate}
           onPainted={measure}

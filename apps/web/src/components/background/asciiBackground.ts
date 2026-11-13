@@ -238,7 +238,8 @@ export function createBackgroundRenderer(canvas: HTMLCanvasElement): BackgroundR
 
   const configure: BackgroundRenderer["configure"] = (w, h, next) => {
     options = next;
-    dpr = window.devicePixelRatio || 1;
+    // Glyphs stay crisp at 1.5x and a Retina frame costs about half of 2x.
+    dpr = Math.min(1.5, window.devicePixelRatio || 1);
     canvas.width = Math.max(1, Math.round(w * dpr));
     canvas.height = Math.max(1, Math.round(h * dpr));
     const cell = Math.max(4, next.cellSize);
