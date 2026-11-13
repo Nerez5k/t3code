@@ -15,9 +15,9 @@ const IMAGE_KEY = "t3code:background-image";
 const IMAGE_EVENT = "t3code:background-image-change";
 /** Width of the text column the scrim protects, matching the timeline's reading width. */
 const COLUMN_WIDTH = 820;
-/** 6 fps with half-speed time: the waves still read as motion at a fraction of the cost. */
-const FRAME_MS = 1000 / 6;
-const TIME_SCALE = 0.5;
+/** 12 fps keeps slow waves smooth; a timer wakes the window only on those frames. */
+const FRAME_MS = 1000 / 12;
+const TIME_SCALE = 0.75;
 /** Without mouse or keyboard input for this long, the pattern holds still until the next input. */
 const IDLE_MS = 90_000;
 /** How often a moving background re-measures the text scrim. */
@@ -103,7 +103,7 @@ export function BackgroundCanvas({
       document.hasFocus() &&
       performance.now() - lastInput < IDLE_MS;
 
-    // A timer paces frames, so the window wakes 6 times a second instead of on every vsync.
+    // A timer paces frames, so the window wakes 12 times a second instead of on every vsync.
     const tick = () => {
       frame = 0;
       if (disposed || !shouldMove()) return;
