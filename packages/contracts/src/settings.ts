@@ -397,17 +397,11 @@ export const VoiceTranscriptionDestination = Schema.Union([
 export type VoiceTranscriptionDestination = typeof VoiceTranscriptionDestination.Type;
 
 export const ClientSettingsSchema = Schema.Struct({
-  backgroundPreset: Schema.Literals([
-    "none",
-    "glow",
-    "rotor",
-    "ridgeline",
-    "aurora",
-    "nebula",
-    "dusk",
-    "upload",
-  ]).pipe(Schema.withDecodingDefault(Effect.succeed("glow" as const))),
-  backgroundStyle: Schema.Literals(["ascii", "dither", "halftone"]).pipe(
+  /** A built-in pattern, "upload", "none", or a local image id such as "x-1". */
+  backgroundPreset: Schema.String.check(Schema.isMaxLength(64)).pipe(
+    Schema.withDecodingDefault(Effect.succeed("glow")),
+  ),
+  backgroundStyle: Schema.Literals(["original", "ascii", "dither", "halftone"]).pipe(
     Schema.withDecodingDefault(Effect.succeed("ascii" as const)),
   ),
   backgroundCellSize: Schema.Number.pipe(
@@ -416,9 +410,9 @@ export const ClientSettingsSchema = Schema.Struct({
   ),
   backgroundIntensity: Schema.Number.pipe(
     Schema.check(Schema.isBetween({ minimum: 0, maximum: 100 })),
-    Schema.withDecodingDefault(Effect.succeed(65)),
+    Schema.withDecodingDefault(Effect.succeed(100)),
   ),
-  backgroundShowInThreads: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(false))),
+  backgroundShowInThreads: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(true))),
   backgroundAnimate: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(false))),
   notificationMode: NotificationMode.pipe(
     Schema.withDecodingDefault(Effect.succeed("off" as const)),
@@ -2025,10 +2019,8 @@ export function requiredScopesForProjectMutation(
 }
 
 export const ClientSettingsPatch = Schema.Struct({
-  backgroundPreset: Schema.optionalKey(
-    Schema.Literals(["none", "glow", "rotor", "ridgeline", "aurora", "nebula", "dusk", "upload"]),
-  ),
-  backgroundStyle: Schema.optionalKey(Schema.Literals(["ascii", "dither", "halftone"])),
+  backgroundPreset: Schema.optionalKey(Schema.String.check(Schema.isMaxLength(64))),
+  backgroundStyle: Schema.optionalKey(Schema.Literals(["original", "ascii", "dither", "halftone"])),
   backgroundCellSize: Schema.optionalKey(
     Schema.Number.check(Schema.isBetween({ minimum: 6, maximum: 24 })),
   ),

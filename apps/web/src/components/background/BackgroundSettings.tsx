@@ -2,42 +2,64 @@ import { useState } from "react";
 import { useScopedSettings, useUpdateScopedSettings } from "../settings/useScopedSettings";
 import { SettingsSection, SettingsRow } from "../settings/settingsLayout";
 import { Switch } from "../ui/switch";
-import { BackgroundCanvas, uploadBackground } from "./Background";
+import { BackgroundCanvas, uploadBackground, useLocalBackgrounds } from "./Background";
 import { PRESETS } from "./asciiBackground";
 
 export function BackgroundSettings() {
   const settings = useScopedSettings();
   const update = useUpdateScopedSettings();
   const [error, setError] = useState("");
+  const images = useLocalBackgrounds();
+  const choices: ReadonlyArray<{ id: string; label: string; image: boolean }> = [
+    { id: "none", label: "None", image: false },
+    ...PRESETS.map((id) => ({ id, label: id.charAt(0).toUpperCase() + id.slice(1), image: false })),
+    ...images.map((entry) => ({ id: entry.id, label: entry.label, image: true })),
+    { id: "upload", label: "Your image", image: true },
+  ];
   return (
     <SettingsSection id="appearance-background" title="Background">
       <p className="text-sm text-muted-foreground">
         A little atmosphere for a fresh start. Images stay on this device.
       </p>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {(["none", ...PRESETS, "upload"] as const).map((preset) => (
+        {choices.map((choice) => (
           <button
-            key={preset}
+            key={choice.id}
             type="button"
-            aria-pressed={settings.backgroundPreset === preset}
-            onClick={() => update({ backgroundPreset: preset })}
+            aria-pressed={settings.backgroundPreset === choice.id}
+            onClick={() =>
+              update({
+                backgroundPreset: choice.id,
+                // Images such as the Kail set are already ASCII art: show them as they are.
+                ...(choice.image && choice.id !== "upload"
+                  ? { backgroundStyle: "original" as const }
+                  : !choice.image && settings.backgroundStyle === "original"
+                    ? { backgroundStyle: "ascii" as const }
+                    : {}),
+              })
+            }
             className="overflow-hidden rounded-lg border text-left focus-visible:outline-2 focus-visible:outline-ring"
             style={{
-              borderColor: settings.backgroundPreset === preset ? "var(--primary)" : undefined,
+              borderColor: settings.backgroundPreset === choice.id ? "var(--primary)" : undefined,
             }}
           >
-            <div className="relative h-20 overflow-hidden bg-background">
-              {preset !== "none" && (
+            <div className="relative h-24 overflow-hidden bg-background">
+              {choice.id !== "none" && (
                 <BackgroundCanvas
-                  preset={preset}
-                  style={settings.backgroundStyle}
+                  preset={choice.id}
+                  style={
+                    choice.image && choice.id !== "upload"
+                      ? "original"
+                      : settings.backgroundStyle === "original"
+                        ? "ascii"
+                        : settings.backgroundStyle
+                  }
                   cellSize={settings.backgroundCellSize}
+                  thumbnail
                 />
               )}
             </div>
-            <span className="block px-3 py-2 text-xs capitalize">
-              {preset === "upload" ? "Your image" : preset}
-            </span>
+            <span className="block px-3 py-2 text-xs">{choice.label}</span>
           </button>
         ))}
       </div>
@@ -50,10 +72,11 @@ export function BackgroundSettings() {
             value={settings.backgroundStyle}
             onChange={(e) => {
               const v = e.target.value;
-              if (v === "ascii" || v === "dither" || v === "halftone")
+              if (v === "original" || v === "ascii" || v === "dither" || v === "halftone")
                 update({ backgroundStyle: v });
             }}
           >
+            <option value="original">Original image</option>
             <option value="ascii">ASCII</option>
             <option value="dither">Dither</option>
             <option value="halftone">Halftone</option>
@@ -94,7 +117,7 @@ export function BackgroundSettings() {
       />
       <SettingsRow
         title="Show in threads"
-        description="Use a quieter background behind messages."
+        description="Keep the background behind messages. The text column gets just enough shade to stay readable."
         control={
           <Switch
             aria-label="Show background in threads"

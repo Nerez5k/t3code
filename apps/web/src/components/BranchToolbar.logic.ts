@@ -59,8 +59,8 @@ export function shouldShowEnvironmentIndicator(input: {
   activeEnvironment: Pick<EnvironmentOption, "isPrimary"> | null;
   canPickEnvironment: boolean;
 }): boolean {
-  if (input.canPickEnvironment) return true;
-  return input.activeEnvironment !== null && !input.activeEnvironment.isPrimary;
+  // The strip always names the machine, like "Mac Studio" in front of the checkout.
+  return input.canPickEnvironment || input.activeEnvironment !== null;
 }
 
 export function shouldShowComposerContextStrip(input: {
