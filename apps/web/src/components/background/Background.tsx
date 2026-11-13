@@ -15,8 +15,11 @@ const IMAGE_KEY = "t3code:background-image";
 const IMAGE_EVENT = "t3code:background-image-change";
 /** Width of the text column the scrim protects, matching the timeline's reading width. */
 const COLUMN_WIDTH = 820;
-/** 15 fps is enough for slow waves; each frame costs a few ms of one core. */
-const FRAME_MS = 1000 / 15;
+/** 6 fps with half-speed time: the waves still read as motion at a fraction of the cost. */
+const FRAME_MS = 1000 / 6;
+const TIME_SCALE = 0.5;
+/** Without mouse or keyboard input for this long, the pattern holds still until the next input. */
+const IDLE_MS = 90_000;
 /** How often a moving background re-measures the text scrim. */
 const REPORT_MS = 2500;
 
@@ -86,10 +89,10 @@ export function BackgroundCanvas({
     let ready = false;
     let frame = 0;
     let resizeTimer: ReturnType<typeof setTimeout>;
-    let lastFrame = 0;
     let lastReport = 0;
     const started = performance.now();
-    const seconds = () => (performance.now() - started) / 1000;
+    const seconds = () => ((performance.now() - started) / 1000) * TIME_SCALE;
+    let lastInput = performance.now();
 
     const shouldMove = () =>
       animate &&
@@ -97,26 +100,26 @@ export function BackgroundCanvas({
       renderer.animatable() &&
       !motion.matches &&
       document.visibilityState === "visible" &&
-      document.hasFocus();
+      document.hasFocus() &&
+      performance.now() - lastInput < IDLE_MS;
 
-    const tick = (now: number) => {
+    // A timer paces frames, so the window wakes 6 times a second instead of on every vsync.
+    const tick = () => {
       frame = 0;
       if (disposed || !shouldMove()) return;
-      if (now - lastFrame >= FRAME_MS) {
-        lastFrame = now;
-        renderer.draw(seconds());
-        if (now - lastReport >= REPORT_MS) {
-          lastReport = now;
-          onPainted?.(canvas);
-        }
+      const now = performance.now();
+      renderer.draw(seconds());
+      if (now - lastReport >= REPORT_MS) {
+        lastReport = now;
+        onPainted?.(canvas);
       }
-      frame = requestAnimationFrame(tick);
+      frame = window.setTimeout(() => requestAnimationFrame(tick), FRAME_MS);
     };
     const sync = () => {
       if (shouldMove()) {
-        if (frame === 0) frame = requestAnimationFrame(tick);
+        if (frame === 0) frame = window.setTimeout(() => requestAnimationFrame(tick), FRAME_MS);
       } else if (frame !== 0) {
-        cancelAnimationFrame(frame);
+        clearTimeout(frame);
         frame = 0;
       }
     };
@@ -148,6 +151,13 @@ export function BackgroundCanvas({
           resizeTimer = setTimeout(paint, 120);
         })
       : () => {};
+    const onInput = () => {
+      lastInput = performance.now();
+      if (frame === 0) sync();
+    };
+    window.addEventListener("pointermove", onInput, { passive: true });
+    window.addEventListener("keydown", onInput, { passive: true });
+    window.addEventListener("wheel", onInput, { passive: true });
     window.addEventListener("focus", sync);
     window.addEventListener("blur", sync);
     document.addEventListener("visibilitychange", sync);
@@ -156,8 +166,11 @@ export function BackgroundCanvas({
     return () => {
       disposed = true;
       clearTimeout(resizeTimer);
-      if (frame !== 0) cancelAnimationFrame(frame);
+      if (frame !== 0) clearTimeout(frame);
       unsubscribe();
+      window.removeEventListener("pointermove", onInput);
+      window.removeEventListener("keydown", onInput);
+      window.removeEventListener("wheel", onInput);
       window.removeEventListener("focus", sync);
       window.removeEventListener("blur", sync);
       document.removeEventListener("visibilitychange", sync);

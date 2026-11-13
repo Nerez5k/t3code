@@ -129,7 +129,7 @@ export function BackgroundSettings() {
       />
       <SettingsRow
         title="Animate"
-        description="Patterns flow as waves while T3 Code is focused, and stop when you switch away or prefer reduced motion. Images stay still."
+        description="Slow waves while T3 Code is focused and you are using it. Stops when you switch away, after 90 s without input, or with reduced motion. Images stay still."
         control={
           <Switch
             aria-label="Animate background"
