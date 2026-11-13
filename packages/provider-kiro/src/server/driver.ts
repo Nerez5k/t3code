@@ -17,6 +17,7 @@ import { mergeProviderInstanceEnvironment } from "@t3tools/provider-core/server/
 import { expandHomePath } from "@t3tools/provider-core/server/pathExpansion";
 import { withInstanceIdentity } from "@t3tools/provider-core/server/instanceIdentity";
 import { makeManualOnlyProviderMaintenanceCapabilities } from "@t3tools/provider-core/server/maintenanceResolver";
+import { kiroRecentlyActive } from "./activity.ts";
 import { makeManagedServerProvider } from "@t3tools/provider-core/server/managedProvider";
 import {
   haveProviderSnapshotSettingsChanged,
@@ -110,6 +111,8 @@ export const KiroDriver: ProviderDriver<KiroSettings, KiroDriverEnv> = {
       haveSettingsChanged: haveProviderSnapshotSettingsChanged,
       initialSnapshot: (settings) =>
         buildInitialKiroProviderSnapshot(settings.provider).pipe(Effect.map(stampIdentity)),
+      // Idle Kiro is not probed; the first probe and each turn's end still refresh credits.
+      refreshOnInterval: () => kiroRecentlyActive(),
       checkProvider: checkKiroProviderStatus(effectiveConfig, processEnv).pipe(
         Effect.map(stampIdentity),
         Effect.provideService(ChildProcessSpawner.ChildProcessSpawner, spawner),

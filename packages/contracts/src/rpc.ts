@@ -6,6 +6,7 @@ import {
   OrchestrationV2SearchThreadsResult,
 } from "./orchestrationV2.ts";
 import { OrchestrationDispatchCommandError } from "./orchestrationDispatch.ts";
+import { TeamConfig, TeamConfigError, TeamStatus } from "./teamOrchestration.ts";
 import {
   McpAppCallToolInput,
   McpAppCallToolResult,
@@ -515,6 +516,8 @@ export const WS_METHODS = {
   serverCommitDesktopUpdate: "server.commitDesktopUpdate",
   serverUpsertKeybinding: "server.upsertKeybinding",
   serverRemoveKeybinding: "server.removeKeybinding",
+  serverGetTeamStatus: "server.getTeamStatus",
+  serverSetTeamConfig: "server.setTeamConfig",
   serverRunStorageCleanup: "server.runStorageCleanup",
   serverGetStorageCleanupReport: "server.getStorageCleanupReport",
   serverGetDatabaseStorage: "server.getDatabaseStorage",
@@ -640,6 +643,18 @@ const WsServerRemoveKeybindingRpc = Rpc.make(WS_METHODS.serverRemoveKeybinding, 
   payload: ServerRemoveKeybindingInput,
   success: ServerRemoveKeybindingResult,
   error: Schema.Union([KeybindingsConfigError, EnvironmentAuthorizationError]),
+});
+
+const WsServerGetTeamStatusRpc = Rpc.make(WS_METHODS.serverGetTeamStatus, {
+  payload: Schema.Struct({}),
+  success: TeamStatus,
+  error: Schema.Union([TeamConfigError, EnvironmentAuthorizationError]),
+});
+
+const WsServerSetTeamConfigRpc = Rpc.make(WS_METHODS.serverSetTeamConfig, {
+  payload: TeamConfig,
+  success: TeamStatus,
+  error: Schema.Union([TeamConfigError, EnvironmentAuthorizationError]),
 });
 
 const WsServerProbeRpc = Rpc.make(WS_METHODS.serverProbe, {
@@ -2129,6 +2144,8 @@ export const WsRpcGroup = RpcGroup.make(
   WsServerCommitDesktopUpdateRpc,
   WsServerUpsertKeybindingRpc,
   WsServerRemoveKeybindingRpc,
+  WsServerGetTeamStatusRpc,
+  WsServerSetTeamConfigRpc,
   WsServerRunStorageCleanupRpc,
   WsServerGetStorageCleanupReportRpc,
   WsServerGetDatabaseStorageRpc,

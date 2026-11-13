@@ -13,6 +13,8 @@ import {
   BotIcon,
   createLucideIcon,
   CalendarClockIcon,
+  ChevronRightIcon,
+  NetworkIcon,
   FileDiffIcon,
   FolderTreeIcon,
   GitBranchIcon,
@@ -102,6 +104,7 @@ const SETTINGS_SECTION_ICONS: Readonly<
   "/settings/browser": GlobeIcon,
   "/settings/devices": SmartphoneIcon,
   "/settings/scheduled-tasks": CalendarClockIcon,
+  "/settings/orchestration": NetworkIcon,
   "/settings/source-control": GitBranchIcon,
   "/settings/worktrees": FolderTreeIcon,
   "/settings/connections": ServerIcon,
@@ -136,6 +139,10 @@ export function SettingsSidebarNav({ pathname }: { pathname: string }) {
   const navigate = useNavigate();
   const currentHash = useLocation({ select: (location) => location.hash });
   const activePath = SETTINGS_DETAIL_PAGE_PARENTS[pathname] ?? pathname;
+  const [openGroups, setOpenGroups] = useState<ReadonlySet<string>>(() => new Set());
+  const groupOpen = (group: (typeof SETTINGS_NAV_GROUPS)[number]) =>
+    openGroups.has(group.heading) ||
+    group.paths.some((to) => activePath === to || activePath.startsWith(`${to}/`));
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState("");
   // Below md the nav is an icon rail; searching expands it over the page.
@@ -383,17 +390,52 @@ export function SettingsSidebarNav({ pathname }: { pathname: string }) {
                       key={group.heading}
                       className="flex flex-col gap-1 max-md:border-t max-md:border-sidebar-border max-md:pt-4 max-md:first:border-t-0 max-md:first:pt-0"
                     >
-                      <h3
-                        id={`settings-nav-group-${index}`}
-                        className={cn(
-                          "px-2 text-xs font-medium text-sidebar-muted-foreground/80",
-                          group.headingHidden ? "sr-only" : !compactSearchOpen && "max-md:sr-only",
-                        )}
-                      >
-                        {m(group.heading)}
-                      </h3>
+                      {group.collapsible ? (
+                        <h3 id={`settings-nav-group-${index}`}>
+                          <button
+                            type="button"
+                            aria-expanded={groupOpen(group)}
+                            onClick={() =>
+                              setOpenGroups((current) => {
+                                const next = new Set(current);
+                                if (next.has(group.heading)) next.delete(group.heading);
+                                else next.add(group.heading);
+                                return next;
+                              })
+                            }
+                            className={cn(
+                              "flex w-full items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-sidebar-muted-foreground/80 hover:bg-accent hover:text-foreground",
+                              !compactSearchOpen && "max-md:sr-only",
+                            )}
+                          >
+                            <ChevronRightIcon
+                              className={cn(
+                                "size-3 transition-transform",
+                                groupOpen(group) && "rotate-90",
+                              )}
+                            />
+                            {m(group.heading)}
+                          </button>
+                        </h3>
+                      ) : (
+                        <h3
+                          id={`settings-nav-group-${index}`}
+                          className={cn(
+                            "px-2 text-xs font-medium text-sidebar-muted-foreground/80",
+                            group.headingHidden
+                              ? "sr-only"
+                              : !compactSearchOpen && "max-md:sr-only",
+                          )}
+                        >
+                          {m(group.heading)}
+                        </h3>
+                      )}
                       {/* The heading stays outside the group it names so NVDA does not read the name twice. */}
-                      <div role="group" aria-labelledby={`settings-nav-group-${index}`}>
+                      <div
+                        role="group"
+                        aria-labelledby={`settings-nav-group-${index}`}
+                        hidden={group.collapsible && !groupOpen(group)}
+                      >
                         <SidebarMenu>
                           {group.paths.map((to) => {
                             const Icon = SETTINGS_SECTION_ICONS[to];

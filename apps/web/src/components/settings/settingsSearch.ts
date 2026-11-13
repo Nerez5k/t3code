@@ -31,6 +31,7 @@ export type SettingsPath =
   | "/settings/browser"
   | "/settings/devices"
   | "/settings/scheduled-tasks"
+  | "/settings/orchestration"
   | "/settings/source-control"
   | "/settings/worktrees"
   | "/settings/connections"
@@ -106,6 +107,7 @@ export const SETTINGS_SECTION_LABELS: Readonly<Record<SettingsPath, string>> = {
   "/settings/browser": msg("Browser"),
   "/settings/devices": msg("Devices"),
   "/settings/scheduled-tasks": msg("Scheduled tasks"),
+  "/settings/orchestration": msg("Orchestration"),
   "/settings/source-control": msg("Source control"),
   "/settings/worktrees": msg("Worktrees"),
   "/settings/connections": msg("Environments"),
@@ -122,6 +124,8 @@ export const SETTINGS_SECTION_LABELS: Readonly<Record<SettingsPath, string>> = {
 export const SETTINGS_NAV_GROUPS: ReadonlyArray<{
   readonly heading: string;
   readonly headingHidden?: true;
+  /** Folded by default; opens when it holds the active page. */
+  readonly collapsible?: true;
   readonly paths: ReadonlyArray<SettingsPath>;
 }> = [
   {
@@ -131,38 +135,38 @@ export const SETTINGS_NAV_GROUPS: ReadonlyArray<{
       "/settings/general",
       "/settings/appearance",
       "/settings/chat",
-      "/settings/diffs",
       "/settings/keybindings",
       "/settings/voice",
-      "/settings/snap-shot",
     ],
   },
   {
     heading: msg("Agents"),
     paths: [
       "/settings/providers",
+      "/settings/orchestration",
       "/settings/threads",
-      "/settings/browser",
       "/settings/devices",
       "/settings/scheduled-tasks",
     ],
   },
   {
-    heading: msg("Code"),
-    paths: ["/settings/projects", "/settings/source-control", "/settings/worktrees"],
-  },
-  {
-    heading: msg("Connections"),
+    heading: msg("Advanced"),
+    collapsible: true,
     paths: [
+      "/settings/diffs",
+      "/settings/browser",
+      "/settings/snap-shot",
+      "/settings/projects",
+      "/settings/source-control",
+      "/settings/worktrees",
       "/settings/connections",
       "/settings/access",
       ...(isSecretsFeatureEnabled ? (["/settings/secrets"] as const) : []),
+      "/settings/maintenance",
+      "/settings/labs",
+      "/settings/archived",
+      "/settings/about",
     ],
-  },
-  {
-    heading: msg("More"),
-    headingHidden: true,
-    paths: ["/settings/maintenance", "/settings/labs", "/settings/about", "/settings/archived"],
   },
 ];
 
@@ -1386,6 +1390,7 @@ const SETTINGS_CATEGORY_SCOPES: Readonly<Record<SettingsPath, SettingsSearchScop
   "/settings/access": "connections",
   "/settings/secrets": null,
   "/settings/scheduled-tasks": null,
+  "/settings/orchestration": null,
   "/settings/maintenance": null,
   "/settings/labs": null,
   "/settings/about": null,

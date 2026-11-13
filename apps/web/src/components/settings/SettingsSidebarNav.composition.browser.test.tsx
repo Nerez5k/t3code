@@ -76,9 +76,10 @@ it("moves Tab through every settings section", async () => {
   await using _screen = await renderNav();
   await userEvent.click(page.getByRole("combobox", { name: "Search settings" }));
 
-  const sections = SETTINGS_NAV_GROUPS.flatMap((group) => group.paths).map(
-    (to) => SETTINGS_SECTION_LABELS[to],
-  );
+  // Folded groups keep their pages out of the Tab order until opened.
+  const sections = SETTINGS_NAV_GROUPS.filter((group) => !group.collapsible)
+    .flatMap((group) => group.paths)
+    .map((to) => SETTINGS_SECTION_LABELS[to]);
   const tabbed: string[] = [];
   for (let step = 0; step < sections.length; step += 1) {
     await userEvent.tab();
@@ -93,7 +94,8 @@ it.each([1280, 390])("names each group by a heading outside it at %ipx wide", as
   await page.viewport(width, 800);
   await using _screen = await renderNav();
 
-  for (const name of ["Agents", "Code", "Connections"]) {
+  await userEvent.click(page.getByRole("button", { name: "Advanced" }));
+  for (const name of ["Agents", "Advanced"]) {
     const heading = page.getByRole("heading", { name, level: 3 });
     await expect.element(heading).toBeInTheDocument();
     const group = page.getByRole("group", { name }).element();

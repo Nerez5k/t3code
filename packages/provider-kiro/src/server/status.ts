@@ -229,6 +229,23 @@ const KiroModelList = Schema.fromJsonString(
 );
 const decodeKiroModelList = Schema.decodeUnknownOption(KiroModelList);
 
+const MODEL_WORDS: Readonly<Record<string, string>> = { gpt: "GPT", glm: "GLM", auto: "Auto" };
+
+/** "claude-opus-5.5" -> "Opus 5.5", "gpt-5.6-sol" -> "GPT-5.6 Sol"; real names pass through. */
+export function prettyKiroModelName(name: string): string {
+  if (!/^[a-z0-9.-]+$/.test(name)) return name;
+  const words = name.replace(/^claude-/, "").split("-");
+  return words
+    .map((word) => {
+      const known = MODEL_WORDS[word];
+      if (known) return known;
+      if (/^[\d.]+$/.test(word)) return word;
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    })
+    .join(" ")
+    .replace(/^GPT (\d)/, "GPT-$1");
+}
+
 /**
  * Reads `kiro-cli chat --list-models --format json`, the account's models. The
  * default entry keeps its name but takes the "default" slug, with Kiro's id as its
@@ -246,7 +263,9 @@ function kiroModelsFromList(
   const defaultModel: ServerProviderModel = {
     slug: KIRO_DEFAULT_MODEL_SLUG,
     // Named after the model it runs, so a named default isn't hidden behind "Kiro default".
-    name: listedDefault ? (listedDefault.model_name ?? listedDefault.model_id) : "Kiro default",
+    name: listedDefault
+      ? prettyKiroModelName(listedDefault.model_name ?? listedDefault.model_id)
+      : "Kiro default",
     aliases: [defaultId],
     isCustom: false,
     isDefault: true,
@@ -259,7 +278,7 @@ function kiroModelsFromList(
       ? defaultModel
       : {
           slug: model.model_id,
-          name: model.model_name ?? model.model_id,
+          name: prettyKiroModelName(model.model_name ?? model.model_id),
           isCustom: false,
           capabilities: kiroModelCapabilities(model.model_id),
         },

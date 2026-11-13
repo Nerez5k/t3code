@@ -44,6 +44,7 @@ export function ComposerContextPermissions(props: {
                   size="xs"
                   className="ms-auto min-w-0 shrink-0"
                   aria-label={`Permissions: ${label}`}
+                  data-composer-shortcut="composer.mode"
                   data-composer-context-control
                 />
               }

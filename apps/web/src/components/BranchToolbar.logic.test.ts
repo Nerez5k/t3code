@@ -12,6 +12,7 @@ import {
   resolveLockedWorkspaceLabel,
   sanitizeNewRefName,
   shouldIncludeBranchPickerItem,
+  shouldShowComposerContextStrip,
 } from "./BranchToolbar.logic";
 
 describe("resolveDraftEnvModeAfterBranchChange", () => {
@@ -325,5 +326,30 @@ describe("sanitizeNewRefName", () => {
   it("does not collapse dashes the user typed", () => {
     expect(sanitizeNewRefName("new - branch")).toBe("new---branch");
     expect(sanitizeNewRefName("foo--bar")).toBe("foo--bar");
+  });
+});
+
+describe("shouldShowComposerContextStrip", () => {
+  it("keeps permissions available in existing threads without git or a machine picker", () => {
+    expect(
+      shouldShowComposerContextStrip({
+        isDraftHeroState: false,
+        persistInActiveThreads: false,
+        hasActiveProject: true,
+        isGitRepo: false,
+        showEnvironmentIndicator: false,
+      }),
+    ).toBe(true);
+  });
+  it("hides the strip without a project", () => {
+    expect(
+      shouldShowComposerContextStrip({
+        isDraftHeroState: false,
+        persistInActiveThreads: true,
+        hasActiveProject: false,
+        isGitRepo: true,
+        showEnvironmentIndicator: true,
+      }),
+    ).toBe(false);
   });
 });

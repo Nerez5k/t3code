@@ -41,6 +41,7 @@ import { makeProviderFailureTurnItem } from "@t3tools/provider-core/server/failu
 import * as ThreadCommandExecutor from "./ThreadCommandExecutor.ts";
 import { stripUnservedToolOutputImageBytes } from "./toolOutputImageBytes.ts";
 import { boundFileChangeForStorage } from "./WireProjection.ts";
+import { markKiroTurnFinished } from "@t3tools/provider-kiro/server";
 
 export class ProviderEventNormalizeError extends Schema.TaggedError<ProviderEventNormalizeError>()(
   "ProviderEventNormalizeError",
@@ -779,15 +780,14 @@ export const layer: Layer.Layer<
             effect.pipe(
               Effect.tap((storedEvents) =>
                 Effect.gen(function* () {
-                  if (
-                    storedEvents.length === 0 ||
-                    input.event.type !== "turn.terminal" ||
-                    input.event.status !== "failed" ||
-                    input.event.failure.class !== "usage_limit"
-                  )
-                    return;
+                  if (storedEvents.length === 0 || input.event.type !== "turn.terminal") return;
+                  const limited =
+                    input.event.status === "failed" && input.event.failure.class === "usage_limit";
                   const instance = yield* instances.getInstance(input.providerInstanceId);
-                  if (!instance?.snapshot.refreshUsage) return;
+                  // Kiro reports credits only through a probe, so each finished turn refreshes them.
+                  const kiro = instance?.driverKind === "kiro";
+                  if (kiro) markKiroTurnFinished();
+                  if ((!limited && !kiro) || !instance?.snapshot.refreshUsage) return;
                   yield* instance.snapshot.refreshUsage.pipe(
                     Effect.ignoreCause({ log: true }),
                     Effect.forkIn(scope, { startImmediately: true }),

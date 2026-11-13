@@ -1653,6 +1653,16 @@ export function createServerEnvironmentAtoms<R, E>(
       scheduler: configScheduler,
       concurrency: configConcurrency,
     }),
+    getTeamStatus: createEnvironmentRpcCommand(runtime, {
+      label: "environment-data:server:get-team-status",
+      tag: WS_METHODS.serverGetTeamStatus,
+    }),
+    setTeamConfig: createEnvironmentRpcCommand(runtime, {
+      label: "environment-data:server:set-team-config",
+      tag: WS_METHODS.serverSetTeamConfig,
+      scheduler: configScheduler,
+      concurrency: configConcurrency,
+    }),
     removeKeybinding: createEnvironmentRpcCommand(runtime, {
       label: "environment-data:server:remove-keybinding",
       tag: WS_METHODS.serverRemoveKeybinding,

@@ -3375,7 +3375,7 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
             data-chat-composer-surface="true"
             data-chat-composer-mobile-collapsed={isComposerCollapsedMobile ? "true" : "false"}
             className={cn(
-              "rounded-2xl transition-[background-color] duration-200",
+              "rounded-3xl transition-[background-color] duration-200",
               "in-data-[thread-context-over]:bg-accent/45 in-data-[thread-context-over]:ring-1 in-data-[thread-context-over]:ring-inset in-data-[thread-context-over]:ring-primary/70",
               isDragOverComposer ? "bg-accent/45 ring-1 ring-inset ring-primary/70" : null,
               projectSelectionRequired ? "opacity-75" : null,
@@ -3656,9 +3656,6 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
                     "hidden sm:flex",
                 )}
               >
-                {composerAttachButton && !dictationTakesFooter ? (
-                  <div className="me-2">{composerAttachButton}</div>
-                ) : null}
                 <div
                   data-chat-composer-actions="right"
                   data-chat-composer-transition-actions="true"
@@ -3672,11 +3669,17 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
                     data-chat-composer-controls="footer"
                     data-chat-composer-footer-controls="true"
                     className={cn(
-                      "relative flex min-w-0 flex-1 items-center justify-end gap-0.5",
+                      "relative flex min-w-0 flex-1 items-center justify-start gap-0.5",
                       dictationTakesFooter && "hidden",
                     )}
                   >
                     {composerControls}
+                    {composerAttachButton ? (
+                      <div data-resting-controls-separator className="flex shrink-0 items-center">
+                        <span aria-hidden="true" className="mx-2 h-4 w-px shrink-0 bg-border" />
+                        {composerAttachButton}
+                      </div>
+                    ) : null}
                   </div>
                   <ComposerFooterPrimaryActions
                     // Stop state belongs to one thread; the composer stays mounted across threads.
@@ -3780,6 +3783,12 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
                     )}
                   >
                     {composerControls}
+                    {composerAttachButton ? (
+                      <div data-resting-controls-separator className="flex shrink-0 items-center">
+                        <span aria-hidden="true" className="mx-2 h-4 w-px shrink-0 bg-border" />
+                        {composerAttachButton}
+                      </div>
+                    ) : null}
                   </div>
                 </div>
               </div>

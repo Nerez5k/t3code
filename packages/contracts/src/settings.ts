@@ -397,6 +397,29 @@ export const VoiceTranscriptionDestination = Schema.Union([
 export type VoiceTranscriptionDestination = typeof VoiceTranscriptionDestination.Type;
 
 export const ClientSettingsSchema = Schema.Struct({
+  backgroundPreset: Schema.Literals([
+    "none",
+    "glow",
+    "rotor",
+    "ridgeline",
+    "aurora",
+    "nebula",
+    "dusk",
+    "upload",
+  ]).pipe(Schema.withDecodingDefault(Effect.succeed("glow" as const))),
+  backgroundStyle: Schema.Literals(["ascii", "dither", "halftone"]).pipe(
+    Schema.withDecodingDefault(Effect.succeed("ascii" as const)),
+  ),
+  backgroundCellSize: Schema.Number.pipe(
+    Schema.check(Schema.isBetween({ minimum: 6, maximum: 24 })),
+    Schema.withDecodingDefault(Effect.succeed(10)),
+  ),
+  backgroundIntensity: Schema.Number.pipe(
+    Schema.check(Schema.isBetween({ minimum: 0, maximum: 100 })),
+    Schema.withDecodingDefault(Effect.succeed(65)),
+  ),
+  backgroundShowInThreads: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(false))),
+  backgroundAnimate: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(false))),
   notificationMode: NotificationMode.pipe(
     Schema.withDecodingDefault(Effect.succeed("off" as const)),
   ),
@@ -2002,6 +2025,18 @@ export function requiredScopesForProjectMutation(
 }
 
 export const ClientSettingsPatch = Schema.Struct({
+  backgroundPreset: Schema.optionalKey(
+    Schema.Literals(["none", "glow", "rotor", "ridgeline", "aurora", "nebula", "dusk", "upload"]),
+  ),
+  backgroundStyle: Schema.optionalKey(Schema.Literals(["ascii", "dither", "halftone"])),
+  backgroundCellSize: Schema.optionalKey(
+    Schema.Number.check(Schema.isBetween({ minimum: 6, maximum: 24 })),
+  ),
+  backgroundIntensity: Schema.optionalKey(
+    Schema.Number.check(Schema.isBetween({ minimum: 0, maximum: 100 })),
+  ),
+  backgroundShowInThreads: Schema.optionalKey(Schema.Boolean),
+  backgroundAnimate: Schema.optionalKey(Schema.Boolean),
   notificationMode: Schema.optionalKey(NotificationMode),
   inAppNotificationsEnabled: Schema.optionalKey(Schema.Boolean),
   diffColorScheme: Schema.optionalKey(DiffColorScheme),
