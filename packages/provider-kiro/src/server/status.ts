@@ -23,6 +23,7 @@ import {
   KIRO_SUPPORTED_RUNTIME_MODES,
   makeKiroAcpRuntime,
 } from "./acpSupport.ts";
+import { kiroUsageFromStreamJson, kiroUsageLimits } from "./usageLimits.ts";
 import {
   AUTH_PROBE_TIMEOUT_MS,
   buildServerProvider,
@@ -356,6 +357,29 @@ const probeKiroAgents = Effect.fn("KiroProvider.probeKiroAgents")(function* (
   return kiroAgentDescriptor(yield* runtime.request("_kiro/config/template", {}));
 }, Effect.scoped);
 
+/**
+ * Credits from Kiro's `/usage`, which bills nothing. The command leaves a saved
+ * session behind, so it is deleted right away.
+ */
+const probeKiroUsage = Effect.fn("KiroProvider.probeKiroUsage")(function* (
+  settings: KiroSettings,
+  environment: NodeJS.ProcessEnv,
+  checkedAt: string,
+) {
+  const output = yield* runKiroCli(
+    settings,
+    ["chat", "--output-format", "stream-json", "/usage"],
+    environment,
+  );
+  const { text, sessionId } = kiroUsageFromStreamJson(output.stdout);
+  if (sessionId !== undefined) {
+    yield* runKiroCli(settings, ["chat", "--delete-session", sessionId], environment).pipe(
+      Effect.ignore,
+    );
+  }
+  return kiroUsageLimits(text, checkedAt);
+});
+
 export const checkKiroProviderStatus = Effect.fn("checkKiroProviderStatus")(function* (
   settings: KiroSettings,
   environment: NodeJS.ProcessEnv,
@@ -430,7 +454,7 @@ export const checkKiroProviderStatus = Effect.fn("checkKiroProviderStatus")(func
   // Signed out, `--list-models` starts a browser login instead, and the agent
   // probe fails to start, so both run only once `whoami` has confirmed the
   // account. Without an agent list the composer shows no agent picker.
-  const [listed, agents] =
+  const [listed, agents, usageLimits] =
     auth.status === "authenticated"
       ? yield* Effect.all(
           [
@@ -452,10 +476,17 @@ export const checkKiroProviderStatus = Effect.fn("checkKiroProviderStatus")(func
               Effect.map(Option.getOrUndefined),
               Effect.orElseSucceed(() => undefined),
             ),
+            probeKiroUsage(settings, probeEnvironment, checkedAt).pipe(
+              Effect.timeoutOption(
+                resolveProviderProbeTimeoutMs("kiro", AUTH_PROBE_TIMEOUT_MS, environment),
+              ),
+              Effect.map(Option.getOrUndefined),
+              Effect.orElseSucceed(() => undefined),
+            ),
           ],
           { concurrency: "unbounded" },
         )
-      : [undefined, undefined];
+      : [undefined, undefined, undefined];
   return snapshot(
     settings,
     checkedAt,
@@ -464,6 +495,7 @@ export const checkKiroProviderStatus = Effect.fn("checkKiroProviderStatus")(func
       version,
       status: auth.status === "authenticated" ? "ready" : "warning",
       auth,
+      ...(usageLimits ? { usageLimits } : {}),
       ...(auth.status === "authenticated"
         ? {}
         : { message: "Could not confirm the Kiro sign-in. Run `kiro-cli whoami` to check." }),
