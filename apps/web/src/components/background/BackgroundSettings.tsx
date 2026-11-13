@@ -18,50 +18,53 @@ export function BackgroundSettings() {
   ];
   return (
     <SettingsSection id="appearance-background" title="Background">
-      <p className="text-sm text-muted-foreground">
-        A little atmosphere for a fresh start. Images stay on this device.
-      </p>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {choices.map((choice) => (
-          <button
-            key={choice.id}
-            type="button"
-            aria-pressed={settings.backgroundPreset === choice.id}
-            onClick={() =>
-              update({
-                backgroundPreset: choice.id,
-                // Images such as the Kail set are already ASCII art: show them as they are.
-                ...(choice.image && choice.id !== "upload"
-                  ? { backgroundStyle: "original" as const }
-                  : !choice.image && settings.backgroundStyle === "original"
-                    ? { backgroundStyle: "ascii" as const }
-                    : {}),
-              })
-            }
-            className="overflow-hidden rounded-lg border text-left focus-visible:outline-2 focus-visible:outline-ring"
-            style={{
-              borderColor: settings.backgroundPreset === choice.id ? "var(--primary)" : undefined,
-            }}
-          >
-            <div className="relative h-24 overflow-hidden bg-background">
-              {choice.id !== "none" && (
-                <BackgroundCanvas
-                  preset={choice.id}
-                  style={
-                    choice.image && choice.id !== "upload"
-                      ? "original"
-                      : settings.backgroundStyle === "original"
-                        ? "ascii"
-                        : settings.backgroundStyle
-                  }
-                  cellSize={settings.backgroundCellSize}
-                  thumbnail
-                />
-              )}
-            </div>
-            <span className="block px-3 py-2 text-xs">{choice.label}</span>
-          </button>
-        ))}
+      <div className="flex flex-col gap-3 px-3 py-4 sm:px-4">
+        <p className="text-xs text-muted-foreground">
+          Shown behind new threads and messages. Patterns move while T3 Code is focused; images stay
+          on this device.
+        </p>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {choices.map((choice) => (
+            <button
+              key={choice.id}
+              type="button"
+              aria-pressed={settings.backgroundPreset === choice.id}
+              onClick={() =>
+                update({
+                  backgroundPreset: choice.id,
+                  // Images such as the Kail set are already ASCII art: show them as they are.
+                  ...(choice.image && choice.id !== "upload"
+                    ? { backgroundStyle: "original" as const }
+                    : !choice.image && settings.backgroundStyle === "original"
+                      ? { backgroundStyle: "ascii" as const }
+                      : {}),
+                })
+              }
+              className="overflow-hidden rounded-lg border text-left focus-visible:outline-2 focus-visible:outline-ring"
+              style={{
+                borderColor: settings.backgroundPreset === choice.id ? "var(--primary)" : undefined,
+              }}
+            >
+              <div className="relative h-24 overflow-hidden bg-background">
+                {choice.id !== "none" && (
+                  <BackgroundCanvas
+                    preset={choice.id}
+                    style={
+                      choice.image && choice.id !== "upload"
+                        ? "original"
+                        : settings.backgroundStyle === "original"
+                          ? "ascii"
+                          : settings.backgroundStyle
+                    }
+                    cellSize={settings.backgroundCellSize}
+                    thumbnail
+                  />
+                )}
+              </div>
+              <span className="block px-3 py-2 text-xs">{choice.label}</span>
+            </button>
+          ))}
+        </div>
       </div>
       <SettingsRow
         title="Style"
@@ -128,7 +131,7 @@ export function BackgroundSettings() {
       />
       <SettingsRow
         title="Animate"
-        description="Slow drift. Respects reduced motion and pauses when hidden."
+        description="Patterns flow as waves while T3 Code is focused, and stop when you switch away or prefer reduced motion. Images stay still."
         control={
           <Switch
             aria-label="Animate background"

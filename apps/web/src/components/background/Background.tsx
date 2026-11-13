@@ -3,9 +3,9 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useClientSettings } from "../../hooks/useSettings";
 import { useTheme } from "../../hooks/useTheme";
 import {
+  createBackgroundRenderer,
   cssColorToRgb,
   isProceduralPreset,
-  renderBackground,
   sampleCanvas,
   scrimAlphaForContrast,
   type BackgroundStyle,
@@ -15,6 +15,10 @@ const IMAGE_KEY = "t3code:background-image";
 const IMAGE_EVENT = "t3code:background-image-change";
 /** Width of the text column the scrim protects, matching the timeline's reading width. */
 const COLUMN_WIDTH = 820;
+/** 20 fps: smooth enough for slow waves, light on battery. */
+const FRAME_MS = 1000 / 20;
+/** How often a moving background re-measures the text scrim. */
+const REPORT_MS = 2500;
 
 export interface LocalBackground {
   readonly id: string;
@@ -106,75 +110,96 @@ export function BackgroundCanvas({
   const { resolvedTheme } = useTheme();
   const upload = useSyncExternalStore(subscribeImage, readImage, () => null);
   const src = imageSourceFor(preset, upload, thumbnail);
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- Paint the canvas bitmap when its source or size changes.
+  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- Owns the canvas bitmap and its animation loop for this source and size.
   useEffect(() => {
     const canvas = ref.current;
     if (!canvas) return;
+    const renderer = createBackgroundRenderer(canvas);
+    const motion = matchMedia("(prefers-reduced-motion: reduce)");
     let image: HTMLImageElement | undefined;
     let disposed = false;
-    let timer: ReturnType<typeof setTimeout>;
-    const draw = () => {
+    let ready = false;
+    let frame = 0;
+    let resizeTimer: ReturnType<typeof setTimeout>;
+    let lastFrame = 0;
+    let lastReport = 0;
+    const started = performance.now();
+    const seconds = () => (performance.now() - started) / 1000;
+
+    const shouldMove = () =>
+      animate &&
+      ready &&
+      renderer.animatable() &&
+      !motion.matches &&
+      document.visibilityState === "visible" &&
+      document.hasFocus();
+
+    const tick = (now: number) => {
+      frame = 0;
+      if (disposed || !shouldMove()) return;
+      if (now - lastFrame >= FRAME_MS) {
+        lastFrame = now;
+        renderer.draw(seconds());
+        if (now - lastReport >= REPORT_MS) {
+          lastReport = now;
+          onPainted?.(canvas);
+        }
+      }
+      frame = requestAnimationFrame(tick);
+    };
+    const sync = () => {
+      if (shouldMove()) {
+        if (frame === 0) frame = requestAnimationFrame(tick);
+      } else if (frame !== 0) {
+        cancelAnimationFrame(frame);
+        frame = 0;
+      }
+    };
+    const paint = () => {
       if (disposed) return;
       const parent = canvas.parentElement;
       if (!parent || (src && !image?.complete)) return;
-      renderBackground(canvas, parent.clientWidth, parent.clientHeight, {
+      renderer.configure(parent.clientWidth, parent.clientHeight, {
         preset,
         style,
         cellSize: thumbnail ? Math.max(4, Math.round(cellSize / 2)) : cellSize,
         light: resolvedTheme === "light",
         image,
       });
+      ready = true;
+      renderer.draw(shouldMove() ? seconds() : 0);
       onPainted?.(canvas);
+      sync();
     };
     if (src) {
       image = new Image();
       image.decoding = "async";
-      image.onload = draw;
+      image.onload = paint;
       image.src = src;
     }
     const unsubscribe = canvas.parentElement
       ? observeResize(canvas.parentElement, () => {
-          clearTimeout(timer);
-          timer = setTimeout(draw, 120);
+          clearTimeout(resizeTimer);
+          resizeTimer = setTimeout(paint, 120);
         })
       : () => {};
-    draw();
-    return () => {
-      disposed = true;
-      clearTimeout(timer);
-      unsubscribe();
-    };
-    // oxlint-disable-next-line react/exhaustive-effect-dependencies -- onPainted is a notification, not an input
-  }, [preset, style, cellSize, resolvedTheme, src, thumbnail]);
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- Keep the native canvas animation aligned with visibility and motion preferences.
-  useEffect(() => {
-    const canvas = ref.current;
-    if (!canvas || !animate) return;
-    const motion = matchMedia("(prefers-reduced-motion: reduce)");
-    let animation: Animation | undefined;
-    const sync = () => {
-      if (motion.matches || document.hidden) {
-        animation?.pause();
-        return;
-      }
-      animation ??= canvas.animate(
-        [
-          { transform: "scale(1.04) translate(-1%, 0)" },
-          { transform: "scale(1.04) translate(1%, -1%)" },
-        ],
-        { duration: 40000, iterations: Infinity, direction: "alternate", easing: "ease-in-out" },
-      );
-      animation.play();
-    };
-    sync();
+    window.addEventListener("focus", sync);
+    window.addEventListener("blur", sync);
     document.addEventListener("visibilitychange", sync);
     motion.addEventListener("change", sync);
+    paint();
     return () => {
-      animation?.cancel();
+      disposed = true;
+      clearTimeout(resizeTimer);
+      if (frame !== 0) cancelAnimationFrame(frame);
+      unsubscribe();
+      window.removeEventListener("focus", sync);
+      window.removeEventListener("blur", sync);
       document.removeEventListener("visibilitychange", sync);
       motion.removeEventListener("change", sync);
     };
-  }, [animate]);
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies -- onPainted is a notification, not an input
+  }, [preset, style, cellSize, resolvedTheme, src, thumbnail, animate]);
   return (
     <canvas
       ref={ref}
@@ -191,8 +216,17 @@ export function BackgroundCanvas({
 export function ChatBackground({ hero }: { hero: boolean }) {
   const settings = useClientSettings();
   const hostRef = useRef<HTMLDivElement>(null);
-  const [scrim, setScrim] = useState(0.6);
+  const [scrimState, setScrimState] = useState({ key: "", alpha: 0.6 });
   const opacity = settings.backgroundIntensity / 100;
+  const scrimKey = [
+    settings.backgroundPreset,
+    settings.backgroundStyle,
+    settings.backgroundCellSize,
+    settings.backgroundIntensity,
+    hero,
+  ].join("|");
+  // A moving pattern can bring brighter cells into the column, so the shade only grows per setup.
+  const scrim = scrimState.key === scrimKey ? scrimState.alpha : 0.6;
   const enabled =
     settings.backgroundPreset !== "none" && (hero || settings.backgroundShowInThreads);
 
@@ -206,13 +240,18 @@ export function ChatBackground({ hero }: { hero: boolean }) {
       ? { x: (width - column) / 2, y: height * 0.25, width: column, height: height * 0.45 }
       : { x: (width - column) / 2, y: 0, width: column, height };
     const style = getComputedStyle(host);
-    setScrim(
-      scrimAlphaForContrast({
-        samples: sampleCanvas(canvas, region),
-        page: cssColorToRgb(style.backgroundColor),
-        text: cssColorToRgb(style.color),
-        opacity,
-      }),
+    const alpha = scrimAlphaForContrast({
+      samples: sampleCanvas(canvas, region),
+      page: cssColorToRgb(style.backgroundColor),
+      text: cssColorToRgb(style.color),
+      opacity,
+    });
+    setScrimState((current) =>
+      current.key === scrimKey
+        ? alpha > current.alpha
+          ? { key: scrimKey, alpha }
+          : current
+        : { key: scrimKey, alpha },
     );
   };
 

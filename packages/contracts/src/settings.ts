@@ -413,7 +413,7 @@ export const ClientSettingsSchema = Schema.Struct({
     Schema.withDecodingDefault(Effect.succeed(100)),
   ),
   backgroundShowInThreads: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(true))),
-  backgroundAnimate: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(false))),
+  backgroundAnimate: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(true))),
   notificationMode: NotificationMode.pipe(
     Schema.withDecodingDefault(Effect.succeed("off" as const)),
   ),

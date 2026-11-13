@@ -5,6 +5,7 @@ export type ProceduralPreset = (typeof PRESETS)[number];
 export type BackgroundStyle = ClientSettings["backgroundStyle"];
 export type Rgb = readonly [number, number, number];
 const RAMP = " .:-=+*#%@";
+const LEVELS = RAMP.length;
 
 /** Text over the background must reach this contrast against its darkest or brightest pixel. */
 export const TARGET_CONTRAST = 4.5;
@@ -13,8 +14,12 @@ export function isProceduralPreset(value: string): value is ProceduralPreset {
   return (PRESETS as ReadonlyArray<string>).includes(value);
 }
 
+function levelIndex(value: number): number {
+  return Math.round(Math.max(0, Math.min(1, value)) * (LEVELS - 1));
+}
+
 export function glyphFor(value: number): string {
-  return RAMP[Math.round(Math.max(0, Math.min(1, value)) * (RAMP.length - 1))]!;
+  return RAMP[levelIndex(value)]!;
 }
 
 export function bayerThreshold(x: number, y: number): number {
@@ -22,49 +27,68 @@ export function bayerThreshold(x: number, y: number): number {
   return (matrix[(((y % 4) + 4) % 4) * 4 + (((x % 4) + 4) % 4)]! + 0.5) / 16;
 }
 
-export function presetColor(preset: ProceduralPreset, x: number, y: number): Rgb {
+/** Travelling brightness waves; never above 1, so a still frame bounds every moving one. */
+function shimmer(x: number, y: number, t: number): number {
+  if (t === 0) return 1;
+  const a = Math.sin(x * 9 + y * 5 - t * 1.4);
+  const b = Math.sin(x * 4 - y * 11 + t * 0.9);
+  return 0.72 + 0.28 * (0.5 + 0.25 * a + 0.25 * b);
+}
+
+/** Colour of a preset at (x, y) in 0..1 and `t` seconds; t = 0 is the still frame. */
+export function presetColor(preset: ProceduralPreset, x: number, y: number, t = 0): Rgb {
   const noise = ((Math.sin(x * 357.1 + y * 193.7) * 43758.5453) % 1) * 0.04;
   let strength = 0;
   let color: Rgb = [255, 115, 45];
   switch (preset) {
-    case "glow":
-      strength = 1.25 * Math.exp(-((x - 0.85) ** 2 * 2.2 + (y - 0.9) ** 2 * 1.8));
+    case "glow": {
+      const cx = 0.85 + 0.02 * Math.sin(t * 0.3);
+      const cy = 0.9 + 0.02 * Math.cos(t * 0.23);
+      const dist = Math.hypot(x - cx, (y - cy) * 0.9);
+      const ripple = t === 0 ? 1 : 0.7 + 0.3 * (0.5 + 0.5 * Math.sin(dist * 26 - t * 2));
+      strength = 1.25 * Math.exp(-((x - cx) ** 2 * 2.2 + (y - cy) ** 2 * 1.8)) * ripple;
       break;
+    }
     case "rotor": {
       const dx = x - 0.68;
       const dy = y - 0.6;
+      const r = Math.hypot(dx, dy);
       strength =
         1.2 *
-        (0.5 + 0.5 * Math.cos(Math.atan2(dy, dx) * 7 + Math.hypot(dx, dy) * 13)) *
-        Math.exp(-Math.hypot(dx, dy) * 1.8);
+        (0.5 + 0.5 * Math.cos(Math.atan2(dy, dx) * 7 + r * 13 - t * 0.35)) *
+        Math.exp(-r * 1.8);
       color = [255, 145, 75];
       break;
     }
     case "ridgeline": {
-      const ridge = 0.66 + Math.sin(x * 8) * 0.09 + Math.sin(x * 19) * 0.025;
+      const ridge = 0.66 + Math.sin(x * 8 + t * 0.12) * 0.09 + Math.sin(x * 19 - t * 0.2) * 0.025;
       strength =
         y < ridge
           ? 1.2 * Math.exp(-(((y - 0.57) * 7) ** 2))
-          : 0.3 + 0.35 * Math.sin(y * 48 + x * 8) ** 12;
+          : 0.3 + 0.35 * Math.sin(y * 48 + x * 8 - t * 2.4) ** 12;
       color = y < ridge ? [255, 145, 93] : [92, 120, 175];
       break;
     }
-    case "aurora":
-      strength =
-        1.2 * Math.exp(-(((y - 0.45 - Math.sin(x * 6) * 0.22) * 4.5) ** 2)) * (0.55 + x * 0.5);
+    case "aurora": {
+      const band = 0.45 + Math.sin(x * 6 + t * 0.45) * 0.2 + Math.sin(x * 13 - t * 0.7) * 0.03;
+      const curtain = t === 0 ? 1 : 0.65 + 0.35 * (0.5 + 0.5 * Math.sin(x * 38 + t * 1.6));
+      strength = 1.2 * Math.exp(-(((y - band) * 4.5) ** 2)) * (0.55 + x * 0.5) * curtain;
       color = [65, 230, 170];
       break;
-    case "nebula":
-      strength =
-        1.25 * Math.exp(-((x - 0.72) ** 2 * 3 + (y - 0.6 - Math.sin(x * 9) * 0.15) ** 2 * 5));
+    }
+    case "nebula": {
+      const swirl = Math.sin(x * 9 + t * 0.4) * 0.15;
+      strength = 1.25 * Math.exp(-((x - 0.72) ** 2 * 3 + (y - 0.6 - swirl) ** 2 * 5));
       color = [215, 95 + x * 45, 245];
       break;
+    }
     case "dusk":
-      strength = 1.15 * Math.exp(-(((y - 0.68) * 3.2) ** 2)) * (0.5 + 0.5 * Math.sin(x * 4) ** 2);
+      strength =
+        1.15 * Math.exp(-(((y - 0.68) * 3.2) ** 2)) * (0.5 + 0.5 * Math.sin(x * 4 + t * 0.35) ** 2);
       color = [110 + y * 55, 130, 250];
       break;
   }
-  const level = Math.max(0, Math.min(1.2, strength + noise));
+  const level = Math.max(0, Math.min(1.2, (strength + noise) * shimmer(x, y, t)));
   return [
     Math.min(255, color[0] * level),
     Math.min(255, color[1] * level),
@@ -136,90 +160,178 @@ function drawCover(
   ctx.drawImage(image, (width - w) / 2, (height - h) / 2, w, h);
 }
 
+export interface BackgroundOptions {
+  readonly preset: string;
+  readonly style: BackgroundStyle;
+  readonly cellSize: number;
+  readonly light: boolean;
+  readonly image?: HTMLImageElement | undefined;
+}
+
+export interface BackgroundRenderer {
+  /** Size in CSS px; rebuilds the glyph atlas and buffers. */
+  readonly configure: (width: number, height: number, options: BackgroundOptions) => void;
+  /** Paints one frame at `t` seconds. Only procedural presets move. */
+  readonly draw: (t: number) => void;
+  readonly animatable: () => boolean;
+}
+
+function offscreen(width: number, height: number) {
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, width);
+  canvas.height = Math.max(1, height);
+  return canvas;
+}
+
+/**
+ * Glyphs come from a white atlas (one drawImage per cell), then the colour field is painted
+ * over them with "source-in", so a frame costs one pass instead of a fillText per cell.
+ */
+export function createBackgroundRenderer(canvas: HTMLCanvasElement): BackgroundRenderer {
+  let options: BackgroundOptions | undefined;
+  let dpr = 1;
+  let cols = 0;
+  let rows = 0;
+  let cellPx = 0;
+  let glyphs: Uint8Array[] = [];
+  let frame: ImageData | undefined;
+  let imageField: Uint8ClampedArray | undefined;
+
+  /** Coverage (0..255) of each glyph or dot, one cellPx square per level. */
+  const buildGlyphs = (style: BackgroundStyle): Uint8Array[] => {
+    const sheet = offscreen(cellPx * LEVELS, cellPx);
+    const ctx = sheet.getContext("2d", { willReadFrequently: true });
+    if (!ctx) return [];
+    ctx.fillStyle = "#fff";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.font = `bold ${cellPx}px ui-monospace, monospace`;
+    for (let level = 1; level < LEVELS; level += 1) {
+      const cx = level * cellPx + cellPx / 2;
+      const cy = cellPx / 2;
+      if (style === "ascii" || style === "original") {
+        ctx.fillText(RAMP[level]!, cx, cy);
+      } else {
+        const radius =
+          style === "halftone" ? cellPx * 0.48 * Math.sqrt(level / (LEVELS - 1)) : cellPx * 0.24;
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    const pixels = ctx.getImageData(0, 0, sheet.width, sheet.height).data;
+    return Array.from({ length: LEVELS }, (_, level) => {
+      const coverage = new Uint8Array(cellPx * cellPx);
+      for (let y = 0; y < cellPx; y++)
+        for (let x = 0; x < cellPx; x++)
+          coverage[y * cellPx + x] = pixels[(y * sheet.width + level * cellPx + x) * 4 + 3]!;
+      return coverage;
+    });
+  };
+
+  const sampleImage = (image: HTMLImageElement) => {
+    const sample = offscreen(cols, rows).getContext("2d", { willReadFrequently: true });
+    if (!sample) return undefined;
+    drawCover(sample, image, cols, rows);
+    return sample.getImageData(0, 0, cols, rows).data;
+  };
+
+  const configure: BackgroundRenderer["configure"] = (w, h, next) => {
+    options = next;
+    dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.max(1, Math.round(w * dpr));
+    canvas.height = Math.max(1, Math.round(h * dpr));
+    const cell = Math.max(4, next.cellSize);
+    cols = Math.ceil(w / cell);
+    rows = Math.ceil(h / cell);
+    cellPx = Math.max(1, Math.round(cell * dpr));
+    glyphs = buildGlyphs(next.style);
+    frame = canvas.getContext("2d")?.createImageData(canvas.width, canvas.height);
+    imageField = next.image && next.style !== "original" ? sampleImage(next.image) : undefined;
+  };
+
+  const draw: BackgroundRenderer["draw"] = (t) => {
+    const ctx = canvas.getContext("2d");
+    if (!ctx || !options) return;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.fillStyle = options.light ? "#faf9f6" : "#08080b";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    if (options.image && options.style === "original") {
+      ctx.imageSmoothingQuality = "high";
+      drawCover(ctx, options.image, canvas.width, canvas.height);
+      return;
+    }
+    const preset = options.preset;
+    if (!imageField && !isProceduralPreset(preset)) return;
+    if (!frame || glyphs.length === 0) return;
+    const out = frame.data;
+    const [br, bg, bb] = options.light ? [250, 249, 246] : [8, 8, 11];
+    new Uint32Array(out.buffer).fill(
+      new Uint32Array(new Uint8ClampedArray([br, bg, bb, 255]).buffer)[0]!,
+    );
+    const stride = frame.width;
+    for (let y = 0; y < rows; y++)
+      for (let x = 0; x < cols; x++) {
+        let r: number;
+        let g: number;
+        let b: number;
+        if (imageField) {
+          const i = (y * cols + x) * 4;
+          r = imageField[i]!;
+          g = imageField[i + 1]!;
+          b = imageField[i + 2]!;
+        } else {
+          [r, g, b] = presetColor(preset as ProceduralPreset, x / cols, y / rows, t);
+        }
+        const level = Math.max(r, g, b) / 255;
+        if (level < 0.04) continue;
+        const index =
+          options.style === "dither" ? (level > bayerThreshold(x, y) ? 1 : 0) : levelIndex(level);
+        if (index === 0) continue;
+        if (options.light) {
+          r = 255 - (255 - r) * 0.75;
+          g = 255 - (255 - g) * 0.75;
+          b = 255 - (255 - b) * 0.75;
+        }
+        const coverage = glyphs[index]!;
+        const ox = x * cellPx;
+        const oy = y * cellPx;
+        const w = Math.min(cellPx, frame.width - ox);
+        const h = Math.min(cellPx, frame.height - oy);
+        for (let py = 0; py < h; py++) {
+          let o = ((oy + py) * stride + ox) * 4;
+          let c = py * cellPx;
+          for (let px = 0; px < w; px++, o += 4, c++) {
+            const a = coverage[c]!;
+            if (a === 0) continue;
+            const k = a / 255;
+            out[o] = br + (r - br) * k;
+            out[o + 1] = bg + (g - bg) * k;
+            out[o + 2] = bb + (b - bb) * k;
+          }
+        }
+      }
+    ctx.putImageData(frame, 0, 0);
+  };
+
+  return {
+    configure,
+    draw,
+    animatable: () =>
+      options !== undefined && !imageField && !options.image && isProceduralPreset(options.preset),
+  };
+}
+
+/** One still frame; tests and thumbnails use it. */
 export function renderBackground(
   canvas: HTMLCanvasElement,
   width: number,
   height: number,
-  options: {
-    readonly preset: string;
-    readonly style: BackgroundStyle;
-    readonly cellSize: number;
-    readonly light: boolean;
-    readonly image?: HTMLImageElement | undefined;
-  },
+  options: BackgroundOptions & { readonly time?: number },
 ): void {
-  const dpr = window.devicePixelRatio || 1;
-  canvas.width = Math.max(1, Math.round(width * dpr));
-  canvas.height = Math.max(1, Math.round(height * dpr));
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return;
-  ctx.scale(dpr, dpr);
-  ctx.fillStyle = options.light ? "#faf9f6" : "#08080b";
-  ctx.fillRect(0, 0, width, height);
-  // Kail-style images are already ASCII art, so "original" shows them untouched.
-  if (options.image && (options.style === "original" || !isProceduralPreset(options.preset))) {
-    if (options.style === "original") {
-      ctx.imageSmoothingQuality = "high";
-      drawCover(ctx, options.image, width, height);
-      return;
-    }
-  }
-  const cell = Math.max(6, options.cellSize);
-  const cols = Math.ceil(width / cell);
-  const rows = Math.ceil(height / cell);
-  const source = document.createElement("canvas");
-  source.width = cols;
-  source.height = rows;
-  const sample = source.getContext("2d", { willReadFrequently: true });
-  if (!sample) return;
-  if (options.image) {
-    drawCover(sample, options.image, cols, rows);
-  } else if (isProceduralPreset(options.preset)) {
-    const pixels = sample.createImageData(cols, rows);
-    for (let y = 0; y < rows; y++)
-      for (let x = 0; x < cols; x++) {
-        const rgb = presetColor(options.preset, x / cols, y / rows);
-        const i = (y * cols + x) * 4;
-        pixels.data[i] = rgb[0];
-        pixels.data[i + 1] = rgb[1];
-        pixels.data[i + 2] = rgb[2];
-        pixels.data[i + 3] = 255;
-      }
-    sample.putImageData(pixels, 0, 0);
-  } else {
-    return;
-  }
-  const pixels = sample.getImageData(0, 0, cols, rows).data;
-  ctx.font = `bold ${cell}px ui-monospace, monospace`;
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  for (let y = 0; y < rows; y++)
-    for (let x = 0; x < cols; x++) {
-      const i = (y * cols + x) * 4;
-      const r = pixels[i]!;
-      const g = pixels[i + 1]!;
-      const b = pixels[i + 2]!;
-      const level = Math.max(r, g, b) / 255;
-      if (level < 0.04) continue;
-      ctx.fillStyle = options.light
-        ? `rgb(${Math.round(255 - (255 - r) * 0.75)},${Math.round(255 - (255 - g) * 0.75)},${Math.round(255 - (255 - b) * 0.75)})`
-        : `rgb(${r},${g},${b})`;
-      const px = (x + 0.5) * cell;
-      const py = (y + 0.5) * cell;
-      if (options.style === "ascii" || options.style === "original") {
-        ctx.fillText(glyphFor(level), px, py);
-      } else if (options.style === "halftone" || level > bayerThreshold(x, y)) {
-        ctx.beginPath();
-        ctx.arc(
-          px,
-          py,
-          options.style === "halftone" ? cell * 0.48 * Math.sqrt(level) : cell * 0.24,
-          0,
-          Math.PI * 2,
-        );
-        ctx.fill();
-      }
-    }
+  const renderer = createBackgroundRenderer(canvas);
+  renderer.configure(width, height, options);
+  renderer.draw(options.time ?? 0);
 }
 
 /** Pixels inside `region` (CSS px) of a painted canvas, sampled on a coarse grid. */
@@ -253,9 +365,7 @@ export function sampleCanvas(
 
 /** Any CSS colour as RGB, through the canvas (handles oklch and color-mix). */
 export function cssColorToRgb(color: string): Rgb {
-  const canvas = document.createElement("canvas");
-  canvas.width = 1;
-  canvas.height = 1;
+  const canvas = offscreen(1, 1);
   const ctx = canvas.getContext("2d", { willReadFrequently: true });
   if (!ctx) return [0, 0, 0];
   ctx.fillStyle = color;

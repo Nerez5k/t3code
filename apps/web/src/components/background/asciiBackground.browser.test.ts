@@ -4,6 +4,7 @@ import {
   PRESETS,
   TARGET_CONTRAST,
   contrastRatio,
+  createBackgroundRenderer,
   renderBackground,
   sampleCanvas,
   scrimAlphaForContrast,
@@ -71,5 +72,64 @@ describe("text stays readable on every background", () => {
     expect(worstShare(samples, THEMES.dark.page, THEMES.dark.text, alpha)).toBeLessThanOrEqual(
       0.02,
     );
+  });
+});
+
+describe("animated patterns", () => {
+  it.each(PRESETS)("%s stays readable across frames", (preset) => {
+    let worst = 0;
+    for (const time of [0, 3, 7, 13, 21, 34]) {
+      const canvas = document.createElement("canvas");
+      canvas.style.width = `${WIDTH}px`;
+      canvas.style.height = `${HEIGHT}px`;
+      document.body.append(canvas);
+      renderBackground(canvas, WIDTH, HEIGHT, {
+        preset,
+        style: "ascii",
+        cellSize: 10,
+        light: false,
+        time,
+      });
+      const samples = sampleCanvas(canvas, COLUMN);
+      canvas.remove();
+      worst = Math.max(worst, scrimAlphaForContrast({ ...THEMES.dark, samples, opacity: 1 }));
+    }
+    expect(worst).toBeLessThan(0.95);
+  });
+
+  // Timing depends on the machine, so the benchmark runs only with T3_BENCH=1.
+  it.runIf(import.meta.env.VITE_T3_BENCH === "1")(
+    "draws a 1600x1000 frame within the 20 fps budget",
+    () => {
+      const canvas = document.createElement("canvas");
+      const renderer = createBackgroundRenderer(canvas);
+      renderer.configure(WIDTH, HEIGHT, {
+        preset: "aurora",
+        style: "ascii",
+        cellSize: 10,
+        light: false,
+      });
+      renderer.draw(1);
+      // oxlint-disable-next-line t3code/no-wall-clock-in-tests -- env-gated benchmark
+      const started = performance.now();
+      for (let frame = 0; frame < 10; frame += 1) renderer.draw(1 + frame / 24);
+      // oxlint-disable-next-line t3code/no-wall-clock-in-tests -- env-gated benchmark
+      expect((performance.now() - started) / 10).toBeLessThan(1000 / 20);
+    },
+  );
+
+  it("moves patterns and keeps images still", () => {
+    const pattern = createBackgroundRenderer(document.createElement("canvas"));
+    pattern.configure(200, 100, { preset: "aurora", style: "ascii", cellSize: 10, light: false });
+    expect(pattern.animatable()).toBe(true);
+    const renderer = createBackgroundRenderer(document.createElement("canvas"));
+    renderer.configure(200, 100, {
+      preset: "x-1",
+      style: "original",
+      cellSize: 10,
+      light: false,
+      image: new Image(),
+    });
+    expect(renderer.animatable()).toBe(false);
   });
 });

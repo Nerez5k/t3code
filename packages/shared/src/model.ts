@@ -375,8 +375,15 @@ export function codexModelFamily(slug: string): string {
   return slug.startsWith("openai.gpt-") ? slug.slice("openai.".length) : slug;
 }
 
+/** "gpt-6.1-sol" and "GPT-6.1-Sol" become "GPT-6.1 Sol"; names not shaped like GPT-n pass through. */
 export function formatCodexModelName(name: string): string {
-  return name.replace(/^gpt/i, "GPT").replace(/-([a-z])/g, (_, c) => "-" + c.toUpperCase());
+  const match = /^gpt-(\d+(?:\.\d+)*)((?:[- ][a-z0-9.]+)*)$/i.exec(name.trim());
+  if (!match) return name.replace(/^gpt/i, "GPT");
+  const words = (match[2] ?? "")
+    .split(/[- ]/)
+    .filter(Boolean)
+    .map((word) => (/^\d/.test(word) ? word : word.charAt(0).toUpperCase() + word.slice(1)));
+  return [`GPT-${match[1]}`, ...words].join(" ");
 }
 
 export function formatModelSlugName(slug: string): string {
