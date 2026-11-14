@@ -1,3 +1,4 @@
+import * as NodeFSP from "node:fs/promises";
 import * as NodeOS from "node:os";
 import type { HostResourcesSnapshot } from "@t3tools/contracts";
 import * as HostProcess from "@t3tools/shared/HostProcess";
@@ -64,6 +65,18 @@ function darwinAvailableMemory(output: string): number | null {
   const available = (Number(free) + Number(inactive) + Number(speculative)) * Number(pageSize);
   return Number.isSafeInteger(available) && Number(pageSize) > 0 ? available : null;
 }
+
+// Free space counts only blocks a normal user can write, as `df` and Finder do.
+const readDisk = Effect.tryPromise(() => NodeFSP.statfs(NodeOS.homedir())).pipe(
+  Effect.map((stats) => {
+    const total = stats.blocks * stats.bsize;
+    const available = stats.bavail * stats.bsize;
+    return Number.isSafeInteger(total) && total > 0 && Number.isSafeInteger(available)
+      ? { diskAvailableBytes: Math.min(total, Math.max(0, available)), diskTotalBytes: total }
+      : {};
+  }),
+  Effect.orElseSucceed(() => ({})),
+);
 
 function cgroupNumber(text: string, pattern: RegExp): number | null {
   const value = pattern.exec(text)?.[1];
@@ -178,6 +191,7 @@ const make = Effect.fn("makeHostResources")(function* () {
       cpuCount,
       availableMemoryBytes: Math.min(totalMemoryBytes, Math.max(0, availableMemoryBytes)),
       totalMemoryBytes,
+      ...(yield* readDisk),
     };
   });
 

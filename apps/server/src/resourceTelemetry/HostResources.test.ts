@@ -114,6 +114,17 @@ describe("HostResources.layer", () => {
     ),
   );
 
+  it.effect("reports free and total space of the home folder volume", () =>
+    Effect.gen(function* () {
+      setup();
+      const snapshot = yield* read;
+
+      assert.ok((snapshot.diskTotalBytes ?? 0) > 0);
+      assert.ok((snapshot.diskAvailableBytes ?? -1) >= 0);
+      assert.ok((snapshot.diskAvailableBytes ?? 0) <= (snapshot.diskTotalBytes ?? 0));
+    }).pipe(Effect.provide(linuxHost(unlimitedCgroup))),
+  );
+
   it.effect("reports memory against the server cgroup's memory.max", () =>
     Effect.gen(function* () {
       setup();
