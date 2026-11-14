@@ -25,11 +25,16 @@ function groupOf(server: Server): Group {
   return "running";
 }
 
+function runningLabel(source: ThreadMcpStatus["source"]) {
+  return source === "config" ? "On" : "Running";
+}
+
 const DOT: Record<Server["status"], string> = {
   connected: "bg-diff-addition",
   connecting: "bg-muted-foreground animate-pulse",
   failed: "bg-destructive",
   disabled: "bg-muted-foreground/40",
+  configured: "bg-muted-foreground",
 };
 
 /** The session's MCP servers, folded to one summary line; toggles apply to new sessions. */
@@ -95,8 +100,9 @@ export function ThreadDetailsMcp(props: {
     grouped.set(groupOf(server), list);
   }
   const count = (group: Group) => grouped.get(group)?.length ?? 0;
+  const live = status.source !== "config";
   const summary = [
-    `${count("running")} running`,
+    `${count("running")} ${live ? "running" : "on"}`,
     count("attention") > 0 ? `${count("attention")} need attention` : null,
     count("off") > 0 ? `${count("off")} off` : null,
   ]
@@ -132,7 +138,7 @@ export function ThreadDetailsMcp(props: {
           {GROUPS.filter((group) => count(group.id) > 0).map((group) => (
             <div key={group.id} className="flex flex-col">
               <span className="px-1 pb-0.5 text-2xs uppercase tracking-wide text-muted-foreground/80">
-                {group.label}
+                {group.id === "running" ? runningLabel(status.source) : group.label}
               </span>
               {(grouped.get(group.id) ?? []).map((server) => {
                 const enabled = pending.get(server.name) ?? server.status !== "disabled";
@@ -179,6 +185,11 @@ export function ThreadDetailsMcp(props: {
               })}
             </div>
           ))}
+          {!live ? (
+            <p className="px-1 text-2xs text-muted-foreground">
+              From config. Live status appears once the agent reports it.
+            </p>
+          ) : null}
           {note ? <p className="px-1 text-2xs text-muted-foreground">{note}</p> : null}
         </div>
       ) : null}

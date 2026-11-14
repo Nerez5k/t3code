@@ -9,6 +9,7 @@ import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as Orchestrator from "../orchestration-v2/Orchestrator.ts";
+import { makeGlobalMcp } from "../mcp-global/GlobalMcp.ts";
 
 export async function editMcpServer(file: string, name: string, enabled: boolean) {
   const original = await NodeFSP.readFile(file, "utf8");
@@ -78,13 +79,34 @@ export const layer = Layer.effect(
       const records = yield* orchestrator
         .getThreadRecords(threadId, ["providerThreads"])
         .pipe(Effect.mapError(() => new ThreadMcpError({})));
-      const provider = records?.providerThreads.findLast(
+      const candidates = (records?.providerThreads ?? []).filter(
         (candidate) => candidate.appThreadId === threadId && candidate.nativeThreadRef !== null,
       );
-      if (!provider || provider.driver !== "kiro") return { supported: false, servers: [] };
-      const nativeId = provider.nativeThreadRef?.nativeId;
-      const snapshot = nativeId ? getMcpStatus(nativeId) : undefined;
-      return { supported: true, servers: [], ...snapshot };
+      const provider =
+        candidates.find((candidate) => candidate.status === "active") ?? candidates.at(-1);
+      const driver = provider?.driver;
+      if (driver !== "kiro" && driver !== "codex") return { supported: false, servers: [] };
+      const nativeId = provider?.nativeThreadRef?.nativeId;
+      const snapshot = driver === "kiro" && nativeId ? getMcpStatus(nativeId) : undefined;
+      if (snapshot && snapshot.servers.length > 0) {
+        return { supported: true, source: "live" as const, ...snapshot };
+      }
+      // No live report yet (Codex, or a Kiro session that has not started): show the config.
+      const listed = yield* makeGlobalMcp()
+        .list()
+        .pipe(Effect.orElseSucceed(() => ({ servers: [] as const })));
+      return {
+        supported: true,
+        source: "config" as const,
+        servers: listed.servers
+          .filter((server) => server[driver].present)
+          .map((server) => ({
+            name: server.name,
+            status: server[driver].enabled ? ("configured" as const) : ("disabled" as const),
+            toolCount: 0,
+            needsAuth: false,
+          })),
+      };
     });
     const setEnabled = Effect.fn("ThreadMcp.setEnabled")(function* (input: {
       threadId: ThreadId;
@@ -93,7 +115,14 @@ export const layer = Layer.effect(
     }) {
       const status = yield* get(input.threadId);
       const server = status.servers.find((server) => server.name === input.name);
-      if (!server?.definedIn) return yield* new ThreadMcpError({});
+      if (!server) return yield* new ThreadMcpError({});
+      if (!server.definedIn) {
+        // Config-only view: the shared list writes Kiro and Codex the same way Settings → MCP does.
+        yield* makeGlobalMcp()
+          .setEnabled({ name: input.name, enabled: input.enabled })
+          .pipe(Effect.mapError(() => new ThreadMcpError({})));
+        return { file: "global", appliesTo: "new-sessions" as const, managedByKiroCrew: false };
+      }
       return yield* Effect.tryPromise({
         try: () => editMcpServer(server.definedIn!, input.name, input.enabled),
         catch: () => new ThreadMcpError({}),

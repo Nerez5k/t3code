@@ -5,10 +5,12 @@ export const ThreadMcpStatusInput = Schema.Struct({ threadId: ThreadId });
 export const ThreadMcpStatus = Schema.Struct({
   supported: Schema.Boolean,
   checkedAt: Schema.optional(Schema.String),
+  /** "live" from the running session, "config" from the agent's config files. */
+  source: Schema.optional(Schema.Literals(["live", "config"])),
   servers: Schema.Array(
     Schema.Struct({
       name: Schema.String,
-      status: Schema.Literals(["connected", "connecting", "failed", "disabled"]),
+      status: Schema.Literals(["connected", "connecting", "failed", "disabled", "configured"]),
       toolCount: Schema.Number,
       layer: Schema.optional(Schema.String),
       definedIn: Schema.optional(Schema.String),

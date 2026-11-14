@@ -77,5 +77,6 @@ export function normalizeMcpStatus(payload: unknown, home = NodeOS.homedir()) {
 export function updateMcpStatus(payload: unknown) {
   const normalized = normalizeMcpStatus(payload);
   if (normalized) snapshots.set(normalized.sessionId, normalized.snapshot);
+  return normalized?.sessionId;
 }
 export const getMcpStatus = (sessionId: string) => snapshots.get(sessionId);

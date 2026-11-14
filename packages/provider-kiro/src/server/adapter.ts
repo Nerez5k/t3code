@@ -559,7 +559,11 @@ function makeKiroAcpAdapterFlavor(options: KiroAdapterV2Options): AcpAdapterV2Fl
     makeRuntime: Effect.fn("Kiro.makeRuntime")(function* (input) {
       const runtime = yield* makeRuntime(input);
       yield* runtime.handleExtNotification("_kiro/mcp/status", Schema.Unknown, (payload) =>
-        Effect.sync(() => updateMcpStatus(payload)),
+        Effect.sync(() => updateMcpStatus(payload)).pipe(
+          Effect.tap((sessionId) =>
+            Effect.logDebug("kiro mcp status", { sessionId: sessionId ?? "unparsed" }),
+          ),
+        ),
       );
       return runtime;
     }),
