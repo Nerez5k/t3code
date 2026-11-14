@@ -786,39 +786,41 @@ export const BranchToolbar = memo(function BranchToolbar({
                 {...(showEnvironmentPicker ? { onEnvironmentChange } : {})}
                 {...(addTargets.length > 0 ? { onAddToMachine: () => onAddToMachine(null) } : {})}
               />
-              {/* The workspace folder lives behind this button instead of the details panel. */}
-              <Popover>
-                <PopoverTrigger
-                  render={<ComposerControl size="xs" aria-label="Workspace folder" />}
-                  data-composer-context-control
-                >
-                  <FolderDotIcon className="size-3 shrink-0" aria-hidden="true" />
-                </PopoverTrigger>
-                <PopoverPopup side="top" align="start" className="w-80">
-                  <RunContextSelector
-                    displayMode="panel"
-                    workspaceRoot={activeProject.workspaceRoot}
-                    forceNewWorktree={forceNewWorktree}
-                    autoEnvironmentLabel={autoEnvironmentLabel}
-                    onAutoEnvironment={onAutoEnvironment}
-                    envLocked={envLocked}
-                    envModeLocked={envModeLocked}
-                    environmentId={environmentId}
-                    availableEnvironments={availableEnvironments}
-                    showEnvironmentPicker={false}
-                    showEnvironmentIndicator={false}
-                    onEnvironmentChange={onEnvironmentChange}
-                    effectiveEnvMode={effectiveEnvMode}
-                    activeWorktreePath={activeWorktreePath}
-                    onEnvModeChange={onEnvModeChange}
-                    previousWorktreeLabel={previousWorktreeLabel}
-                    previousWorktreeBranch={previousWorktreeSeed?.branch ?? null}
-                    onUsePreviousWorktree={onUsePreviousWorktree}
-                    addTargets={addTargets}
-                    onAddToMachine={onAddToMachine}
-                  />
-                </PopoverPopup>
-              </Popover>
+              {/* Projects without git controls reach their workspace folder through this button. */}
+              {showGitControls ? null : (
+                <Popover>
+                  <PopoverTrigger
+                    render={<ComposerControl size="xs" aria-label="Workspace folder" />}
+                    data-composer-context-control
+                  >
+                    <FolderDotIcon className="size-3 shrink-0" aria-hidden="true" />
+                  </PopoverTrigger>
+                  <PopoverPopup side="top" align="start" className="w-80">
+                    <RunContextSelector
+                      displayMode="panel"
+                      workspaceRoot={activeProject.workspaceRoot}
+                      forceNewWorktree={forceNewWorktree}
+                      autoEnvironmentLabel={autoEnvironmentLabel}
+                      onAutoEnvironment={onAutoEnvironment}
+                      envLocked={envLocked}
+                      envModeLocked={envModeLocked}
+                      environmentId={environmentId}
+                      availableEnvironments={availableEnvironments}
+                      showEnvironmentPicker={false}
+                      showEnvironmentIndicator={false}
+                      onEnvironmentChange={onEnvironmentChange}
+                      effectiveEnvMode={effectiveEnvMode}
+                      activeWorktreePath={activeWorktreePath}
+                      onEnvModeChange={onEnvModeChange}
+                      previousWorktreeLabel={previousWorktreeLabel}
+                      previousWorktreeBranch={previousWorktreeSeed?.branch ?? null}
+                      onUsePreviousWorktree={onUsePreviousWorktree}
+                      addTargets={addTargets}
+                      onAddToMachine={onAddToMachine}
+                    />
+                  </PopoverPopup>
+                </Popover>
+              )}
               {showGitControls ? (
                 <Separator
                   orientation="vertical"

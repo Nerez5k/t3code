@@ -74,7 +74,7 @@ function ContextStrip({ className, ...props }: ComponentProps<"div">) {
     <div
       data-slot="composer-context-strip"
       className={cn(
-        "group/composer-context surface-glass relative mx-4 flex w-auto items-center gap-2 overflow-x-clip rounded-b-2xl border border-t-0 border-border/60 px-3 pt-1.5 pb-1 text-muted-foreground",
+        "group/composer-context surface-glass relative mx-5 flex w-auto items-center gap-1 overflow-x-clip rounded-b-xl border border-t-0 border-border/40 px-2 pt-0.5 pb-0 text-muted-foreground/80",
         className,
       )}
       {...props}
