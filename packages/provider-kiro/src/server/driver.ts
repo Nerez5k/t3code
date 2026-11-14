@@ -18,6 +18,7 @@ import { expandHomePath } from "@t3tools/provider-core/server/pathExpansion";
 import { withInstanceIdentity } from "@t3tools/provider-core/server/instanceIdentity";
 import { makeManualOnlyProviderMaintenanceCapabilities } from "@t3tools/provider-core/server/maintenanceResolver";
 import { kiroRecentlyActive } from "./activity.ts";
+import { makeKiroSessionManagement } from "./nativeSessions.ts";
 import { makeManagedServerProvider } from "@t3tools/provider-core/server/managedProvider";
 import {
   haveProviderSnapshotSettingsChanged,
@@ -91,13 +92,23 @@ export const KiroDriver: ProviderDriver<KiroSettings, KiroDriverEnv> = {
       driverKind: DRIVER_KIND,
       instanceId,
     });
-    const stampIdentity = withInstanceIdentity({
+    const stampInstance = withInstanceIdentity({
       instanceId,
       driverKind: DRIVER_KIND,
       displayName,
       accentColor,
       continuationGroupKey: continuationIdentity.continuationKey,
     });
+    // Kiro V3 lists, loads and deletes its own sessions, so they can be imported as threads.
+    const stampIdentity = (snapshot: Parameters<typeof stampInstance>[0]) => {
+      const stamped = stampInstance(snapshot);
+      return stamped.auth.status === "authenticated"
+        ? {
+            ...stamped,
+            nativeSessions: { canList: true, canLoad: true, canResume: false, canDelete: true },
+          }
+        : stamped;
+    };
     const effectiveConfig = {
       ...config,
       enabled,
@@ -165,6 +176,15 @@ export const KiroDriver: ProviderDriver<KiroSettings, KiroDriverEnv> = {
       snapshot,
       orchestrationAdapter,
       textGeneration: unsupportedTextGeneration,
+      acpSessionManagement: makeKiroSessionManagement({
+        settings: effectiveConfig,
+        environment: processEnv,
+        provide: (effect) =>
+          effect.pipe(
+            Effect.provideService(ChildProcessSpawner.ChildProcessSpawner, spawner),
+            Effect.provideService(SecureRandom.SecureRandom, crypto),
+          ),
+      }),
     } satisfies ProviderInstance;
   }),
 };
