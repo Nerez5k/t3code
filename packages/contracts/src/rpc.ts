@@ -1,4 +1,11 @@
 import {
+  ThreadMcpStatusInput,
+  ThreadMcpStatus,
+  SetMcpServerEnabledInput,
+  SetMcpServerEnabledResult,
+  ThreadMcpError,
+} from "./threadMcp.ts";
+import {
   OrchestrationV2SearchThreadError,
   OrchestrationV2SearchThreadInput,
   OrchestrationV2SearchThreadResult,
@@ -516,6 +523,8 @@ export const WS_METHODS = {
   serverCommitDesktopUpdate: "server.commitDesktopUpdate",
   serverUpsertKeybinding: "server.upsertKeybinding",
   serverRemoveKeybinding: "server.removeKeybinding",
+  serverGetThreadMcpStatus: "server.getThreadMcpStatus",
+  serverSetMcpServerEnabled: "server.setMcpServerEnabled",
   serverGetTeamStatus: "server.getTeamStatus",
   serverSetTeamConfig: "server.setTeamConfig",
   serverRunStorageCleanup: "server.runStorageCleanup",
@@ -643,6 +652,17 @@ const WsServerRemoveKeybindingRpc = Rpc.make(WS_METHODS.serverRemoveKeybinding, 
   payload: ServerRemoveKeybindingInput,
   success: ServerRemoveKeybindingResult,
   error: Schema.Union([KeybindingsConfigError, EnvironmentAuthorizationError]),
+});
+
+const WsServerGetThreadMcpStatusRpc = Rpc.make(WS_METHODS.serverGetThreadMcpStatus, {
+  payload: ThreadMcpStatusInput,
+  success: ThreadMcpStatus,
+  error: Schema.Union([ThreadMcpError, EnvironmentAuthorizationError]),
+});
+const WsServerSetMcpServerEnabledRpc = Rpc.make(WS_METHODS.serverSetMcpServerEnabled, {
+  payload: SetMcpServerEnabledInput,
+  success: SetMcpServerEnabledResult,
+  error: Schema.Union([ThreadMcpError, EnvironmentAuthorizationError]),
 });
 
 const WsServerGetTeamStatusRpc = Rpc.make(WS_METHODS.serverGetTeamStatus, {
@@ -2144,6 +2164,8 @@ export const WsRpcGroup = RpcGroup.make(
   WsServerCommitDesktopUpdateRpc,
   WsServerUpsertKeybindingRpc,
   WsServerRemoveKeybindingRpc,
+  WsServerGetThreadMcpStatusRpc,
+  WsServerSetMcpServerEnabledRpc,
   WsServerGetTeamStatusRpc,
   WsServerSetTeamConfigRpc,
   WsServerRunStorageCleanupRpc,

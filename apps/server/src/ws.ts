@@ -1,3 +1,4 @@
+import * as ThreadMcp from "./provider/ThreadMcp.ts";
 import { OrchestrationDispatchCommandError } from "@t3tools/contracts";
 // @effect-diagnostics-next-line nodeBuiltinImport:off -- A synchronous digest inside the pure provider mapping.
 import * as NodeCrypto from "node:crypto";
@@ -1479,6 +1480,10 @@ export const layerWsRpc = (
       const deviceHostContext =
         yield* Effect.context<Effect.Services<ReturnType<typeof remoteSshDeviceHosts>>>();
       const orchestrationEngine = yield* Orchestrator.OrchestratorV2;
+      const threadMcp = yield* ThreadMcp.ThreadMcp.pipe(
+        Effect.provide(ThreadMcp.layer),
+        Effect.provideService(Orchestrator.OrchestratorV2, orchestrationEngine),
+      );
       const random = yield* SecureRandom.SecureRandom;
       // RPC client ids are only unique within one socket; terminals share viewers across sockets.
       const terminalViewerPrefix = yield* random.uuidV4();
@@ -2640,6 +2645,8 @@ export const layerWsRpc = (
           Effect.fnUntraced(function* (rule) {
             return yield* keybindings.upsertKeybindingRule(rule);
           }),
+        [WS_METHODS.serverGetThreadMcpStatus]: (input) => threadMcp.get(input.threadId),
+        [WS_METHODS.serverSetMcpServerEnabled]: (input) => threadMcp.setEnabled(input),
         [WS_METHODS.serverGetTeamStatus]: () => readTeamStatus,
         [WS_METHODS.serverSetTeamConfig]: (config) => writeTeamConfig(config),
         [WS_METHODS.serverRemoveKeybinding]:

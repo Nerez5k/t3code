@@ -1,3 +1,4 @@
+import { updateMcpStatus } from "./mcpStatus.ts";
 import * as HostProcess from "@t3tools/shared/HostProcess";
 import { resolveSelfInvocation, type SelfInvocation } from "@t3tools/shared/nodeRuntime";
 import {
@@ -555,7 +556,13 @@ function makeKiroAcpAdapterFlavor(options: KiroAdapterV2Options): AcpAdapterV2Fl
     // Kiro run them itself; `enabled` alone hands them to the client as
     // `_kiro/hooks/*` requests, which T3 does not answer.
     clientCapabilitiesMeta: { kiro: { hooks: { enabled: true, v2: true } } },
-    makeRuntime,
+    makeRuntime: Effect.fn("Kiro.makeRuntime")(function* (input) {
+      const runtime = yield* makeRuntime(input);
+      yield* runtime.handleExtNotification("_kiro/mcp/status", Schema.Unknown, (payload) =>
+        Effect.sync(() => updateMcpStatus(payload)),
+      );
+      return runtime;
+    }),
     promptFailure: kiroPromptFailure,
     ignoreSessionUpdate: makeKiroCloudConfigFilter(),
     normalizeSessionUpdate: (notification) =>

@@ -1659,6 +1659,16 @@ export function createServerEnvironmentAtoms<R, E>(
       scheduler: configScheduler,
       concurrency: configConcurrency,
     }),
+    getThreadMcpStatus: createEnvironmentRpcCommand(runtime, {
+      label: "environment-data:server:get-thread-mcp-status",
+      tag: WS_METHODS.serverGetThreadMcpStatus,
+    }),
+    setMcpServerEnabled: createEnvironmentRpcCommand(runtime, {
+      label: "environment-data:server:set-mcp-server-enabled",
+      tag: WS_METHODS.serverSetMcpServerEnabled,
+      scheduler: configScheduler,
+      concurrency: configConcurrency,
+    }),
     getTeamStatus: createEnvironmentRpcCommand(runtime, {
       label: "environment-data:server:get-team-status",
       tag: WS_METHODS.serverGetTeamStatus,
