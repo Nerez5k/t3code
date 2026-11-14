@@ -3688,6 +3688,11 @@ export default function ChatView(props: ChatViewProps) {
                                     : composerBannerItems
                                 }
                                 resumeCompactionTokens={resumeCompactionTokens}
+                                contextUsedTokens={activeContextWindow?.usedTokens ?? null}
+                                contextMaxTokens={activeContextWindow?.maxTokens ?? null}
+                                contextAutoCompactThreshold={
+                                  activeContextWindow?.autoCompactThreshold ?? null
+                                }
                                 keepFullHistory={keepFullHistory}
                                 onToggleKeepFullHistory={toggleKeepFullHistoryStable}
                                 sideChatAvailable={sideChat.available}

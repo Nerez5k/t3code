@@ -382,6 +382,10 @@ export interface ChatComposerProps {
   canSteer: boolean;
   bannerItems: readonly ComposerBannerStackItem[];
   resumeCompactionTokens: number | null;
+  /** Context use for the meter beside the model picker; null until the provider reports it. */
+  contextUsedTokens: number | null;
+  contextMaxTokens: number | null;
+  contextAutoCompactThreshold: number | null;
   keepFullHistory: boolean;
   onToggleKeepFullHistory: () => void;
   onUsageLimitsCommand?: (() => void) | undefined;
@@ -2480,6 +2484,9 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
       modelPickerOpen={isComposerModelPickerOpen}
       onModelPickerOpenChange={setIsComposerModelPickerOpen}
       modelPickerIconClassName={composerProviderState.modelPickerIconClassName}
+      contextUsedTokens={props.contextUsedTokens}
+      contextMaxTokens={props.contextMaxTokens}
+      contextAutoCompactThreshold={props.contextAutoCompactThreshold}
       getModelDisabledReason={getModelDisabledReason}
     />
   );

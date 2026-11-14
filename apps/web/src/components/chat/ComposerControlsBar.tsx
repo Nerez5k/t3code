@@ -30,6 +30,7 @@ import {
 } from "./ComposerModelEffort";
 import type { useComposerProviderModel } from "./useComposerProviderModel";
 import { resolveComposerControlsOwnership } from "./composerControlsOwnership";
+import { ComposerContextMeter } from "./ComposerContextMeter";
 
 /**
  * The composer footer controls: the model picker (which also holds effort, speed and
@@ -85,6 +86,9 @@ export function ComposerControlsBar(props: {
   modelPickerOpen: boolean;
   onModelPickerOpenChange: (open: boolean) => void;
   modelPickerIconClassName: string | undefined;
+  contextUsedTokens: number | null;
+  contextMaxTokens: number | null;
+  contextAutoCompactThreshold: number | null;
   getModelDisabledReason: ChatComposerProps["getModelDisabledReason"];
 }) {
   const {
@@ -266,6 +270,17 @@ export function ComposerControlsBar(props: {
   ) : (
     <>
       {composerModelPicker}
+      <ComposerContextMeter
+        usage={
+          props.contextUsedTokens === null
+            ? null
+            : {
+                usedTokens: props.contextUsedTokens,
+                maxTokens: props.contextMaxTokens,
+                autoCompactThreshold: props.contextAutoCompactThreshold,
+              }
+        }
+      />
 
       <>
         {restingBlockDefs.map((def, index) => {
