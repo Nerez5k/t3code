@@ -1659,6 +1659,34 @@ export function createServerEnvironmentAtoms<R, E>(
       scheduler: configScheduler,
       concurrency: configConcurrency,
     }),
+    listGlobalMcp: createEnvironmentRpcCommand(runtime, {
+      label: "environment-data:server:ListGlobalMcp",
+      tag: WS_METHODS.serverListGlobalMcp,
+    }),
+    upsertGlobalMcp: createEnvironmentRpcCommand(runtime, {
+      label: "environment-data:server:UpsertGlobalMcp",
+      tag: WS_METHODS.serverUpsertGlobalMcp,
+      scheduler: configScheduler,
+      concurrency: configConcurrency,
+    }),
+    setGlobalMcpEnabled: createEnvironmentRpcCommand(runtime, {
+      label: "environment-data:server:SetGlobalMcpEnabled",
+      tag: WS_METHODS.serverSetGlobalMcpEnabled,
+      scheduler: configScheduler,
+      concurrency: configConcurrency,
+    }),
+    setGlobalMcpLeadAccess: createEnvironmentRpcCommand(runtime, {
+      label: "environment-data:server:SetGlobalMcpLeadAccess",
+      tag: WS_METHODS.serverSetGlobalMcpLeadAccess,
+      scheduler: configScheduler,
+      concurrency: configConcurrency,
+    }),
+    removeGlobalMcp: createEnvironmentRpcCommand(runtime, {
+      label: "environment-data:server:RemoveGlobalMcp",
+      tag: WS_METHODS.serverRemoveGlobalMcp,
+      scheduler: configScheduler,
+      concurrency: configConcurrency,
+    }),
     getThreadMcpStatus: createEnvironmentRpcCommand(runtime, {
       label: "environment-data:server:get-thread-mcp-status",
       tag: WS_METHODS.serverGetThreadMcpStatus,

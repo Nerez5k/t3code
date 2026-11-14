@@ -1,3 +1,4 @@
+import { makeGlobalMcp } from "./mcp-global/GlobalMcp.ts";
 import * as ThreadMcp from "./provider/ThreadMcp.ts";
 import { OrchestrationDispatchCommandError } from "@t3tools/contracts";
 // @effect-diagnostics-next-line nodeBuiltinImport:off -- A synchronous digest inside the pure provider mapping.
@@ -1480,6 +1481,7 @@ export const layerWsRpc = (
       const deviceHostContext =
         yield* Effect.context<Effect.Services<ReturnType<typeof remoteSshDeviceHosts>>>();
       const orchestrationEngine = yield* Orchestrator.OrchestratorV2;
+      const globalMcp = makeGlobalMcp();
       const threadMcp = yield* ThreadMcp.ThreadMcp.pipe(
         Effect.provide(ThreadMcp.layer),
         Effect.provideService(Orchestrator.OrchestratorV2, orchestrationEngine),
@@ -2645,6 +2647,11 @@ export const layerWsRpc = (
           Effect.fnUntraced(function* (rule) {
             return yield* keybindings.upsertKeybindingRule(rule);
           }),
+        [WS_METHODS.serverListGlobalMcp]: (_input) => globalMcp.list(),
+        [WS_METHODS.serverUpsertGlobalMcp]: (input) => globalMcp.upsert(input),
+        [WS_METHODS.serverSetGlobalMcpEnabled]: (input) => globalMcp.setEnabled(input),
+        [WS_METHODS.serverSetGlobalMcpLeadAccess]: (input) => globalMcp.setLeadAccess(input),
+        [WS_METHODS.serverRemoveGlobalMcp]: (input) => globalMcp.remove(input),
         [WS_METHODS.serverGetThreadMcpStatus]: (input) => threadMcp.get(input.threadId),
         [WS_METHODS.serverSetMcpServerEnabled]: (input) => threadMcp.setEnabled(input),
         [WS_METHODS.serverGetTeamStatus]: () => readTeamStatus,

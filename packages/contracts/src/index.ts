@@ -76,3 +76,5 @@ export * from "./settingsSecretValue.ts";
 export * from "./clientRpcPermissions.ts";
 
 export * from "./threadMcp.ts";
+
+export * from "./globalMcp.ts";

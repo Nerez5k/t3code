@@ -1,4 +1,12 @@
 import {
+  GlobalMcpList,
+  GlobalMcpError,
+  UpsertGlobalMcpInput,
+  SetGlobalMcpEnabledInput,
+  SetGlobalMcpLeadAccessInput,
+  RemoveGlobalMcpInput,
+} from "./globalMcp.ts";
+import {
   ThreadMcpStatusInput,
   ThreadMcpStatus,
   SetMcpServerEnabledInput,
@@ -523,6 +531,11 @@ export const WS_METHODS = {
   serverCommitDesktopUpdate: "server.commitDesktopUpdate",
   serverUpsertKeybinding: "server.upsertKeybinding",
   serverRemoveKeybinding: "server.removeKeybinding",
+  serverListGlobalMcp: "server.listGlobalMcp",
+  serverUpsertGlobalMcp: "server.upsertGlobalMcp",
+  serverSetGlobalMcpEnabled: "server.setGlobalMcpEnabled",
+  serverSetGlobalMcpLeadAccess: "server.setGlobalMcpLeadAccess",
+  serverRemoveGlobalMcp: "server.removeGlobalMcp",
   serverGetThreadMcpStatus: "server.getThreadMcpStatus",
   serverSetMcpServerEnabled: "server.setMcpServerEnabled",
   serverGetTeamStatus: "server.getTeamStatus",
@@ -652,6 +665,32 @@ const WsServerRemoveKeybindingRpc = Rpc.make(WS_METHODS.serverRemoveKeybinding, 
   payload: ServerRemoveKeybindingInput,
   success: ServerRemoveKeybindingResult,
   error: Schema.Union([KeybindingsConfigError, EnvironmentAuthorizationError]),
+});
+
+const WsServerListGlobalMcpRpc = Rpc.make(WS_METHODS.serverListGlobalMcp, {
+  payload: Schema.Struct({}),
+  success: GlobalMcpList,
+  error: Schema.Union([GlobalMcpError, EnvironmentAuthorizationError]),
+});
+const WsServerUpsertGlobalMcpRpc = Rpc.make(WS_METHODS.serverUpsertGlobalMcp, {
+  payload: UpsertGlobalMcpInput,
+  success: GlobalMcpList,
+  error: Schema.Union([GlobalMcpError, EnvironmentAuthorizationError]),
+});
+const WsServerSetGlobalMcpEnabledRpc = Rpc.make(WS_METHODS.serverSetGlobalMcpEnabled, {
+  payload: SetGlobalMcpEnabledInput,
+  success: GlobalMcpList,
+  error: Schema.Union([GlobalMcpError, EnvironmentAuthorizationError]),
+});
+const WsServerSetGlobalMcpLeadAccessRpc = Rpc.make(WS_METHODS.serverSetGlobalMcpLeadAccess, {
+  payload: SetGlobalMcpLeadAccessInput,
+  success: GlobalMcpList,
+  error: Schema.Union([GlobalMcpError, EnvironmentAuthorizationError]),
+});
+const WsServerRemoveGlobalMcpRpc = Rpc.make(WS_METHODS.serverRemoveGlobalMcp, {
+  payload: RemoveGlobalMcpInput,
+  success: GlobalMcpList,
+  error: Schema.Union([GlobalMcpError, EnvironmentAuthorizationError]),
 });
 
 const WsServerGetThreadMcpStatusRpc = Rpc.make(WS_METHODS.serverGetThreadMcpStatus, {
@@ -2164,6 +2203,11 @@ export const WsRpcGroup = RpcGroup.make(
   WsServerCommitDesktopUpdateRpc,
   WsServerUpsertKeybindingRpc,
   WsServerRemoveKeybindingRpc,
+  WsServerListGlobalMcpRpc,
+  WsServerUpsertGlobalMcpRpc,
+  WsServerSetGlobalMcpEnabledRpc,
+  WsServerSetGlobalMcpLeadAccessRpc,
+  WsServerRemoveGlobalMcpRpc,
   WsServerGetThreadMcpStatusRpc,
   WsServerSetMcpServerEnabledRpc,
   WsServerGetTeamStatusRpc,
