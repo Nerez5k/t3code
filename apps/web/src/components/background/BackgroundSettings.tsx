@@ -18,7 +18,7 @@ export function BackgroundSettings() {
     <SettingsSection id="appearance-background" title="Background">
       <div className="flex flex-col gap-3 px-3 py-4 sm:px-4">
         <p className="text-xs text-muted-foreground">
-          Shown behind new threads and messages. Patterns move while T3 Code is focused; images stay
+          Shown behind new threads and messages. Patterns move while Synthia is focused; images stay
           on this device.
         </p>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -129,7 +129,7 @@ export function BackgroundSettings() {
       />
       <SettingsRow
         title="Animate"
-        description="Slow waves while T3 Code is focused and you are using it. Stops when you switch away, after 90 s without input, or with reduced motion. Images stay still."
+        description="Slow waves while Synthia is focused and you are using it. Stops when you switch away, after 90 s without input, or with reduced motion. Images stay still."
         control={
           <Switch
             aria-label="Animate background"
