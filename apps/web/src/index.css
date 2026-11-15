@@ -2658,6 +2658,10 @@ html[data-app-backdrop] {
 html[data-app-backdrop] body {
   background: transparent;
 }
+html[data-app-backdrop] #root {
+  position: relative;
+  z-index: 1;
+}
 html[data-app-backdrop] #root,
 html[data-app-backdrop] [data-slot="sidebar-wrapper"],
 html[data-app-backdrop] [data-slot="sidebar-inset"],

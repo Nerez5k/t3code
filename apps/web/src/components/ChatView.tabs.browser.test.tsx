@@ -66,3 +66,38 @@ it("keeps opened threads as title bar tabs and closes one to its neighbour", asy
   await expect.poll(() => tabs.elements().length).toBe(1);
   expect(useThreadTabsStore.getState().tabs.map((tab) => tab.ref.threadId)).toEqual([first.id]);
 });
+
+it("keeps one window-wide background under a glass sidebar while switching threads", async () => {
+  const first = threadWithHistory("glass-first", 1);
+  const second = threadWithHistory("glass-second", 1);
+  using _environment = installFakeEnvironment([first, second]);
+  __setClientSettingsForTests({
+    ...DEFAULT_CLIENT_SETTINGS,
+    onboardingCompletedAt: "2026-01-01T00:00:00.000Z",
+    backgroundPreset: "waves",
+    backgroundAnimate: false,
+    sidebarSurface: "glass",
+  });
+  useThreadTabsStore.setState({ tabs: [] });
+  const router = getRouter(
+    createMemoryHistory({ initialEntries: [`/${ENVIRONMENT_ID}/${first.id}`] }),
+  );
+  await router.load();
+  await using _app = await render(<AppRoot router={router} />, { router: false });
+  await expect.element(page.getByText("glass-first: question 0")).toBeVisible();
+  for (const thread of [second, first, second]) {
+    await router.navigate({
+      to: "/$environmentId/$threadId",
+      params: { environmentId: ENVIRONMENT_ID, threadId: thread.id },
+    });
+    await expect.element(page.getByText(`${thread.id}: question 0`)).toBeVisible();
+  }
+  await expect
+    .poll(() => document.querySelectorAll('[data-background-layer="window"]').length)
+    .toBe(1);
+  expect(document.documentElement.dataset.appBackdrop).toBe("");
+  // The layer lives on <body>, outside every app surface that could cover it.
+  expect(document.querySelector('[data-background-layer="window"]')?.parentElement).toBe(
+    document.body,
+  );
+});

@@ -3405,7 +3405,7 @@ export default function ChatView(props: ChatViewProps) {
               data-chat-conversation
               className="relative flex min-h-0 flex-1 flex-col bg-background"
             >
-              <ChatBackground hero={isDraftHeroState} />
+              <ChatBackground hero={isDraftHeroState} embedded={embedded} />
               <WorkspaceMutationIdContext value={workspaceMutationId}>
                 <ThreadTimeline
                   pendingApprovals={pendingApprovals}

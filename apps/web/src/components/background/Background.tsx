@@ -1,5 +1,7 @@
 import { observeResize } from "../../lib/observeResize";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { use, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
+import { BackgroundThreadContext } from "../chat/backgroundThread";
 import { useClientSettings } from "../../hooks/useSettings";
 import { useTheme } from "../../hooks/useTheme";
 import {
@@ -10,6 +12,9 @@ import {
   scrimAlphaForContrast,
   type BackgroundStyle,
 } from "./asciiBackground";
+
+/** Mounted views painting the window-wide pattern; the document flag stays while any does. */
+let windowBackdropOwners = 0;
 
 const IMAGE_KEY = "t3code:background-image";
 const IMAGE_EVENT = "t3code:background-image-change";
@@ -191,8 +196,16 @@ export function BackgroundCanvas({
  * The page background. A scrim behind the text column is sized from the painted pixels, so
  * text keeps 4.5:1 contrast on any preset or image while the edges stay vivid.
  */
-export function ChatBackground({ hero }: { hero: boolean }) {
+export function ChatBackground({
+  hero,
+  embedded = false,
+}: {
+  hero: boolean;
+  /** Side chats and other inset views keep the pattern to their own column. */
+  embedded?: boolean;
+}) {
   const settings = useClientSettings();
+  const background = use(BackgroundThreadContext);
   // Presets from removed image sets fall back to Glow.
   const preset =
     settings.backgroundPreset === "none" ||
@@ -214,14 +227,18 @@ export function ChatBackground({ hero }: { hero: boolean }) {
   const scrim = scrimState.key === scrimKey ? scrimState.alpha : 0.6;
   const enabled = preset !== "none" && (hero || settings.backgroundShowInThreads);
   // Under a see-through sidebar the pattern covers the whole window, beneath the app's surfaces.
-  const windowWide = enabled && settings.sidebarSurface !== "solid";
+  // Kept-alive threads behind the visible one stay out, so only the routed view paints it.
+  const windowWide = enabled && !background && !embedded && settings.sidebarSurface !== "solid";
 
   // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- marks the document so the app shell's surfaces turn transparent while the window-wide pattern is painted
   useEffect(() => {
     if (!windowWide) return;
+    windowBackdropOwners += 1;
     document.documentElement.dataset.appBackdrop = "";
     return () => {
-      delete document.documentElement.dataset.appBackdrop;
+      windowBackdropOwners -= 1;
+      // Another mounted view may still paint the window; only the last one clears the flag.
+      if (windowBackdropOwners === 0) delete document.documentElement.dataset.appBackdrop;
     };
   }, [windowWide]);
 
@@ -256,7 +273,7 @@ export function ChatBackground({ hero }: { hero: boolean }) {
     );
   };
 
-  if (!enabled) return null;
+  if (!enabled || background) return null;
   const page = "var(--background)";
   const solid = `color-mix(in srgb, ${page} ${Math.round(scrim * 100)}%, transparent)`;
   const soft = `color-mix(in srgb, ${page} ${Math.round(scrim * 55)}%, transparent)`;
@@ -270,25 +287,48 @@ export function ChatBackground({ hero }: { hero: boolean }) {
       aria-hidden="true"
       className="pointer-events-none absolute inset-0 overflow-hidden"
     >
-      <div
-        className={windowWide ? "fixed inset-0 -z-10" : "absolute inset-0"}
-        data-background-layer={windowWide ? "window" : "column"}
-        style={{ opacity }}
-      >
-        <BackgroundCanvas
-          preset={preset}
-          style={
-            preset === "upload"
-              ? settings.backgroundStyle
-              : settings.backgroundStyle === "original"
-                ? "ascii"
-                : settings.backgroundStyle
-          }
-          cellSize={settings.backgroundCellSize}
-          animate={settings.backgroundAnimate}
-          onPainted={measure}
-        />
-      </div>
+      {windowWide ? (
+        // On <body>, behind #root: no ancestor surface or stacking context in the app can hide it.
+        createPortal(
+          <div
+            aria-hidden="true"
+            className="pointer-events-none fixed inset-0 z-0 overflow-hidden"
+            data-background-layer="window"
+            style={{ opacity }}
+          >
+            <BackgroundCanvas
+              preset={preset}
+              style={
+                preset === "upload"
+                  ? settings.backgroundStyle
+                  : settings.backgroundStyle === "original"
+                    ? "ascii"
+                    : settings.backgroundStyle
+              }
+              cellSize={settings.backgroundCellSize}
+              animate={settings.backgroundAnimate}
+              onPainted={measure}
+            />
+          </div>,
+          document.body,
+        )
+      ) : (
+        <div className="absolute inset-0" data-background-layer="column" style={{ opacity }}>
+          <BackgroundCanvas
+            preset={preset}
+            style={
+              preset === "upload"
+                ? settings.backgroundStyle
+                : settings.backgroundStyle === "original"
+                  ? "ascii"
+                  : settings.backgroundStyle
+            }
+            cellSize={settings.backgroundCellSize}
+            animate={settings.backgroundAnimate}
+            onPainted={measure}
+          />
+        </div>
+      )}
       <div className="absolute inset-0" style={{ background: scrimBackground }} />
     </div>
   );
