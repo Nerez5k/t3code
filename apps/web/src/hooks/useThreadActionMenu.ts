@@ -10,6 +10,7 @@ import {
 import { canSnooze, effectiveSnoozed } from "@t3tools/client-runtime/state/thread-settled";
 import {
   AuthOrchestrationOperateScope,
+  type ContextMenuItem,
   type ScopedThreadRef,
   type ThreadId,
 } from "@t3tools/contracts";
@@ -107,7 +108,14 @@ export function useThreadActionMenu(input: {
     onError: (error) => failureToast("Failed to copy thread ID", error),
   });
 
-  const openMenu = (position: { x: number; y: number }) => {
+  /** `leading` items go above the thread actions; a click on one goes to `onLeading` instead. */
+  const openMenu = (
+    position: { x: number; y: number },
+    leading?: {
+      readonly items: readonly ContextMenuItem<`tab:${string}`>[];
+      readonly onSelect: (id: `tab:${string}`) => void;
+    },
+  ) => {
     if (threadRef === null) return;
     void (async () => {
       const api = readLocalApi();
@@ -145,9 +153,22 @@ export function useThreadActionMenu(input: {
         canShareWithGuest,
         canTurnIntoProject: canTurnThreadIntoProject(threadRef),
       });
-      const clicked = await settlePromise(() => api.contextMenu.show(items, position));
+      const menu: readonly ContextMenuItem<ThreadActionMenuId | `tab:${string}`>[] =
+        leading === undefined || leading.items.length === 0
+          ? items
+          : [
+              ...leading.items,
+              ...items.map((item, index) =>
+                index === 0 ? { ...item, separatorBefore: true } : item,
+              ),
+            ];
+      const clicked = await settlePromise(() => api.contextMenu.show(menu, position));
       if (clicked._tag === "Failure" || clicked.value === null) return;
-      const action: ThreadActionMenuId = clicked.value;
+      if (clicked.value.startsWith("tab:")) {
+        leading?.onSelect(clicked.value as `tab:${string}`);
+        return;
+      }
+      const action = clicked.value as ThreadActionMenuId;
       if (
         threadActionRequiresOperate(action) &&
         !readEnvironmentScope(threadRef.environmentId, AuthOrchestrationOperateScope)

@@ -192,7 +192,7 @@ it("a new draft does not load its reserved thread before the server lists it", a
   expect(threadRequests).toEqual([]);
 });
 
-it("opens the thread actions menu for an older settled thread the shell leaves out", async () => {
+it("opens the thread actions menu from the tab of an older settled thread the shell leaves out", async () => {
   const thread = { ...threadWithHistory("older-settled", 1), olderSettled: true as const };
   using _environment = installFakeEnvironment([thread]);
   __setClientSettingsForTests({
@@ -210,7 +210,8 @@ it("opens the thread actions menu for an older settled thread the shell leaves o
   });
   await expect.element(page.getByText("older-settled: question 0")).toBeVisible();
 
-  await page.getByRole("button", { name: `Thread actions for ${thread.title}` }).click();
+  // The title bar tab carries the thread actions on right-click.
+  await page.getByRole("tab", { name: new RegExp(thread.title) }).click({ button: "right" });
   // Without a bound the poll runs to the test deadline and reports a bare timeout.
   await expect
     .element(page.getByRole("menuitem", { name: "Rename thread" }), { timeout: 5_000 })

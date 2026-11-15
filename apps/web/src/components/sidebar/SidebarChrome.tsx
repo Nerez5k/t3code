@@ -1,4 +1,4 @@
-import { ArrowLeftIcon, ArrowRightIcon, ChartNoAxesColumnIcon, SettingsIcon } from "lucide-react";
+import { ArrowLeftIcon, ArrowRightIcon, SettingsIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { memo } from "react";
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
@@ -13,7 +13,6 @@ import {
 } from "../../navigationHistory";
 import { primaryServerKeybindingsAtom } from "../../state/server";
 import { cn } from "../../lib/utils";
-import { usePullRequestsSupported } from "../../state/environments";
 import {
   resolveEnvironmentIdentificationPillLabel,
   resolveSidebarStageBackdropVariant,
@@ -31,13 +30,12 @@ import {
   useSidebar,
 } from "../ui/sidebar";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
-import { readPullRequestListPreferences } from "../pullRequest/pullRequestListPreferences";
 import { isSidebarUtilityPage, useNavigateToMainApp } from "./mainAppLocation";
 import { SidebarThreadUndoNotice } from "./SidebarThreadUndoNotice";
 import { SidebarProviderUpdatePill } from "./SidebarProviderUpdatePill";
 import { SidebarSystemMonitor } from "./SidebarSystemMonitor";
+import { SynthiaStar } from "../SynthiaStar";
 import { SidebarUpdateArchitectureWarning, SidebarUpdatePill } from "./SidebarUpdatePill";
-import { PullRequestGlyph } from "~/components/pullRequest/pullRequestIcons";
 import { observeResize } from "~/lib/observeResize";
 
 export const SidebarChromeHeader = memo(function SidebarChromeHeader({
@@ -180,6 +178,7 @@ function SidebarBrand({ onBackdrop }: { onBackdrop: boolean }) {
 function SidebarBrandMark({ onBackdrop }: { onBackdrop: boolean }) {
   return (
     <span className="inline-flex min-w-0 items-center gap-1.5 text-sm font-semibold tracking-tight">
+      <SynthiaStar aria-hidden="true" className="size-4.5 shrink-0" />
       <span
         className={cn(
           "truncate [text-box:trim-both_cap_alphabetic] supports-[text-box:trim-both_cap_alphabetic]:py-1",
@@ -224,29 +223,14 @@ const SidebarUtilityMenu = memo(function SidebarUtilityMenu() {
   const isOnUtilityPage = useLocation({
     select: (location) => isSidebarUtilityPage(location.pathname),
   });
-  const pullRequestsSupported = usePullRequestsSupported();
   const closeMobileSidebar = () => {
     if (isMobile) {
       setOpenMobile(false);
     }
   };
-  const handlePullRequestsClick = () => {
-    closeMobileSidebar();
-    void navigate({
-      to: "/pull-requests",
-      search: readPullRequestListPreferences(),
-    });
-  };
   const handleSettingsClick = () => {
     closeMobileSidebar();
     void navigate({ to: "/settings" });
-  };
-
-  const handleUsageClick = () => {
-    if (isMobile) {
-      setOpenMobile(false);
-    }
-    void navigate({ to: "/usage" });
   };
 
   const handleBackClick = () => {
@@ -269,18 +253,6 @@ const SidebarUtilityMenu = memo(function SidebarUtilityMenu() {
             icon={<SettingsIcon />}
             label="Settings"
             onClick={handleSettingsClick}
-          />
-          {pullRequestsSupported ? (
-            <SidebarUtilityItem
-              icon={<PullRequestGlyph.pullRequest />}
-              label="Pull requests"
-              onClick={handlePullRequestsClick}
-            />
-          ) : null}
-          <SidebarUtilityItem
-            icon={<ChartNoAxesColumnIcon />}
-            label="Usage"
-            onClick={handleUsageClick}
           />
         </>
       )}

@@ -228,10 +228,7 @@ import { useOpenPanelPullRequestUrl } from "../hooks/useOpenPanelPullRequestUrl"
 import { isPreviewFocused } from "../lib/previewFocus";
 import { getTerminalFocusOwner } from "../lib/terminalFocus";
 import { draftModelSelectionApplies, threadHasStarted } from "../lib/chatThreadActions";
-import {
-  deriveLogicalProjectKeyFromSettings,
-  selectProjectGroupingSettings,
-} from "@t3tools/client-runtime/state/project-grouping";
+import { selectProjectGroupingSettings } from "@t3tools/client-runtime/state/project-grouping";
 import {
   isSameSidebarThreadRef,
   useSidebarPendingFileDropStore,
@@ -297,7 +294,8 @@ import { NativeChildWorkDialog } from "./chat/NativeChildWorkDialog";
 import { ProviderSubagentBar } from "./chat/ProviderSubagentBar";
 import { getTriggerDisplayModelName } from "./chat/providerIconUtils";
 import { resolveScrollToEndClearance } from "./composerFooterLayout";
-import { ChatHeader } from "./chat/ChatHeader";
+import { ThreadTabStrip } from "./chat/ThreadTabStrip";
+import { GuestShareIndicator } from "./chat/GuestShareControls";
 import { useSideChat } from "./chat/useSideChat";
 import { useRemoteOpenState } from "~/remoteOpen";
 import { shouldShowOpenInPicker } from "./chat/OpenInPicker.logic";
@@ -952,14 +950,6 @@ export default function ChatView(props: ChatViewProps) {
           }),
     };
   })();
-  // The header's breadcrumb opens a parent in this environment only.
-  const headerParentThreadLink =
-    parentSubagentThreadRef === null
-      ? null
-      : {
-          threadId: parentSubagentThreadRef.threadId,
-          title: parentSubagentThread?.title ?? "Parent thread",
-        };
   const threadError = isServerThread
     ? (localServerError ?? serverRuntime?.lastError ?? null)
     : localDraftError;
@@ -1148,18 +1138,6 @@ export default function ChatView(props: ChatViewProps) {
   };
   const handleNewThreadInActiveProjectStable = useStableCallback(handleNewThreadInActiveProject);
   const projectGroupingSettings = selectProjectGroupingSettings(settings);
-  const activeDraftLogicalProjectKey =
-    !isServerThread && activeProject
-      ? deriveLogicalProjectKeyFromSettings(activeProject, projectGroupingSettings)
-      : undefined;
-  const handleOpenDraftProjectSettings = () => {
-    if (!activeDraftLogicalProjectKey) return;
-    void navigate({
-      to: "/projects/$projectKey",
-      params: { projectKey: activeDraftLogicalProjectKey },
-    });
-  };
-  const handleOpenDraftProjectSettingsStable = useStableCallback(handleOpenDraftProjectSettings);
   const activeEnvironmentBootstrapComplete = useEnvironmentShellHasSnapshot(
     activeThread?.environmentId ?? null,
   );
@@ -2736,11 +2714,6 @@ export default function ChatView(props: ChatViewProps) {
     : EMPTY_PROVIDER_SKILLS;
   const threadFindEnabled = isServerThread && serverConfig?.threadFind === true;
   const isThreadFindActive = useThreadFindOpen(activeThreadRef, threadFindEnabled);
-  const openThreadFindStable = useStableCallback((threadRef: ScopedThreadRef) => {
-    if (threadFindEnabled && scopedThreadKey(threadRef) === activeThreadKey) {
-      openThreadFind(activeThreadKey);
-    }
-  });
 
   useChatShortcuts({
     enabled: activeThreadId !== null && !backgroundThread,
@@ -3368,21 +3341,19 @@ export default function ChatView(props: ChatViewProps) {
             ) : null}
             {!rightPanelControlsAtRoot && !rightPanelControlsInPanel ? panelLayoutControls : null}
             {inlineRightPanelOwnsTitleBar ? threadPanelHeaderControl : null}
-            <ChatHeader
-              activeThreadEnvironmentId={activeThread.environmentId}
-              activeThreadId={activeThread.id}
-              isServerThread={isServerThread}
-              activeThreadTitle={activeThread.title}
-              activeThreadLinkOrigin={activeThreadShell?.linkOrigin?.label ?? null}
-              activeProject={activeProject ?? null}
-              parentThreadLink={headerParentThreadLink}
-              onOpenThread={onOpenRelatedThreadStable}
-              rightPanelOpen={inlineRightPanelOwnsTitleBar}
-              onNewThreadInProject={handleNewThreadInActiveProjectStable}
-              {...(activeDraftLogicalProjectKey
-                ? { onOpenProjectSettings: handleOpenDraftProjectSettingsStable }
-                : {})}
-              {...(threadFindEnabled ? { onFindInThread: openThreadFindStable } : {})}
+            <ThreadTabStrip
+              activeEnvironmentId={isServerThread ? activeThread.environmentId : null}
+              activeThreadId={isServerThread ? activeThread.id : null}
+              onNewThread={handleNewThreadInActiveProjectStable}
+            />
+            {isServerThread ? (
+              <GuestShareIndicator
+                threadRef={scopeThreadRef(activeThread.environmentId, activeThread.id)}
+              />
+            ) : null}
+            <span
+              aria-hidden
+              className={inlineRightPanelOwnsTitleBar ? "w-10 shrink-0" : "w-24 shrink-0"}
             />
           </header>
         )}
