@@ -3299,6 +3299,7 @@ export default function ChatView(props: ChatViewProps) {
   const content = (
     <div
       ref={setWorkspaceLayoutElement}
+      data-chat-root
       className="relative flex min-h-0 min-w-0 flex-1 overflow-hidden bg-background"
     >
       {embedded ? null : (
@@ -3401,6 +3402,7 @@ export default function ChatView(props: ChatViewProps) {
             />
             <div
               {...conversationArea}
+              data-chat-conversation
               className="relative flex min-h-0 flex-1 flex-col bg-background"
             >
               <ChatBackground hero={isDraftHeroState} />

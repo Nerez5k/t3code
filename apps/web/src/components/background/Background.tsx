@@ -213,16 +213,33 @@ export function ChatBackground({ hero }: { hero: boolean }) {
   // A moving pattern can bring brighter cells into the column, so the shade only grows per setup.
   const scrim = scrimState.key === scrimKey ? scrimState.alpha : 0.6;
   const enabled = preset !== "none" && (hero || settings.backgroundShowInThreads);
+  // Under a see-through sidebar the pattern covers the whole window, beneath the app's surfaces.
+  const windowWide = enabled && settings.sidebarSurface !== "solid";
+
+  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- marks the document so the app shell's surfaces turn transparent while the window-wide pattern is painted
+  useEffect(() => {
+    if (!windowWide) return;
+    document.documentElement.dataset.appBackdrop = "";
+    return () => {
+      delete document.documentElement.dataset.appBackdrop;
+    };
+  }, [windowWide]);
 
   const measure = (canvas: HTMLCanvasElement) => {
     const host = hostRef.current?.parentElement;
     if (!host) return;
-    const width = canvas.clientWidth;
-    const height = canvas.clientHeight;
+    // The canvas may span the window; the text column is measured within this host.
+    const hostRect = host.getBoundingClientRect();
+    const canvasRect = canvas.getBoundingClientRect();
+    const offsetX = hostRect.left - canvasRect.left;
+    const offsetY = hostRect.top - canvasRect.top;
+    const width = hostRect.width;
+    const height = hostRect.height;
     const column = Math.min(width, COLUMN_WIDTH);
-    const region = hero
+    const local = hero
       ? { x: (width - column) / 2, y: height * 0.25, width: column, height: height * 0.45 }
       : { x: (width - column) / 2, y: 0, width: column, height };
+    const region = { ...local, x: local.x + offsetX, y: local.y + offsetY };
     const style = getComputedStyle(host);
     const alpha = scrimAlphaForContrast({
       samples: sampleCanvas(canvas, region),
@@ -253,7 +270,11 @@ export function ChatBackground({ hero }: { hero: boolean }) {
       aria-hidden="true"
       className="pointer-events-none absolute inset-0 overflow-hidden"
     >
-      <div className="absolute inset-0" style={{ opacity }}>
+      <div
+        className={windowWide ? "fixed inset-0 -z-10" : "absolute inset-0"}
+        data-background-layer={windowWide ? "window" : "column"}
+        style={{ opacity }}
+      >
         <BackgroundCanvas
           preset={preset}
           style={

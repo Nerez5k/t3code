@@ -4,6 +4,7 @@ import { SettingsSection, SettingsRow } from "../settings/settingsLayout";
 import { Switch } from "../ui/switch";
 import { BackgroundCanvas, uploadBackground } from "./Background";
 import { PRESETS } from "./asciiBackground";
+import { SCENE_LABELS, SCENES } from "./scenes";
 
 export function BackgroundSettings() {
   const settings = useScopedSettings();
@@ -12,6 +13,7 @@ export function BackgroundSettings() {
   const choices: ReadonlyArray<{ id: string; label: string; image: boolean }> = [
     { id: "none", label: "None", image: false },
     ...PRESETS.map((id) => ({ id, label: id.charAt(0).toUpperCase() + id.slice(1), image: false })),
+    ...SCENES.map((id) => ({ id, label: SCENE_LABELS[id], image: false })),
     { id: "upload", label: "Your image", image: true },
   ];
   return (

@@ -1,4 +1,5 @@
 import { BackgroundSettings } from "../background/BackgroundSettings";
+import { SidebarAppearanceSettings } from "../sidebar/SidebarAppearanceSettings";
 import type { CSSProperties } from "react";
 import { useState } from "react";
 import {
@@ -481,6 +482,7 @@ export function AppearanceSettingsPanel() {
         </AdvancedSettings>
       </SettingsSection>
 
+      <SidebarAppearanceSettings />
       <BackgroundSettings />
       <TypographySection />
     </SettingsPageContainer>

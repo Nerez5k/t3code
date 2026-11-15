@@ -2640,3 +2640,29 @@ code {
 .messages-timeline-scroll:focus-visible {
   outline: none;
 }
+
+/* Synthia: see-through sidebar. The tint is the share of the sidebar colour kept. */
+html[data-sidebar-surface="glass"] [data-slot="sidebar-inner"] {
+  background-color: color-mix(in srgb, var(--sidebar) var(--sidebar-tint, 55%), transparent);
+  backdrop-filter: blur(22px) saturate(1.5);
+  -webkit-backdrop-filter: blur(22px) saturate(1.5);
+}
+html[data-sidebar-surface="clear"] [data-slot="sidebar-inner"] {
+  background-color: color-mix(in srgb, var(--sidebar) var(--sidebar-tint, 55%), transparent);
+}
+
+/* While a pattern spans the window, the shell's own surfaces step aside so it shows through. */
+html[data-app-backdrop] {
+  background: var(--background);
+}
+html[data-app-backdrop] body {
+  background: transparent;
+}
+html[data-app-backdrop] #root,
+html[data-app-backdrop] [data-slot="sidebar-wrapper"],
+html[data-app-backdrop] [data-slot="sidebar-inset"],
+html[data-app-backdrop] [data-chat-root],
+html[data-app-backdrop] [data-chat-header],
+html[data-app-backdrop] [data-chat-conversation] {
+  background-color: transparent;
+}

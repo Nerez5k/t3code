@@ -1,4 +1,5 @@
 import type { ClientSettings } from "@t3tools/contracts/settings";
+import { isScene, sceneBase, sceneColor } from "./scenes";
 
 export const PRESETS = ["glow", "rotor", "ridgeline", "aurora", "nebula", "dusk"] as const;
 export type ProceduralPreset = (typeof PRESETS)[number];
@@ -10,8 +11,9 @@ const LEVELS = RAMP.length;
 /** Text over the background must reach this contrast against its darkest or brightest pixel. */
 export const TARGET_CONTRAST = 4.5;
 
-export function isProceduralPreset(value: string): value is ProceduralPreset {
-  return (PRESETS as ReadonlyArray<string>).includes(value);
+/** Built-in patterns and scenes; both are drawn in code and can move. */
+export function isProceduralPreset(value: string): boolean {
+  return (PRESETS as ReadonlyArray<string>).includes(value) || isScene(value);
 }
 
 function levelIndex(value: number): number {
@@ -255,18 +257,23 @@ export function createBackgroundRenderer(canvas: HTMLCanvasElement): BackgroundR
     const ctx = canvas.getContext("2d");
     if (!ctx || !options) return;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.fillStyle = options.light ? "#faf9f6" : "#08080b";
+    const preset = options.preset;
+    const scene = isScene(preset) ? preset : null;
+    const [br, bg, bb] = scene
+      ? sceneBase(scene, options.light)
+      : options.light
+        ? [250, 249, 246]
+        : [8, 8, 11];
+    ctx.fillStyle = `rgb(${br} ${bg} ${bb})`;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     if (options.image && options.style === "original") {
       ctx.imageSmoothingQuality = "high";
       drawCover(ctx, options.image, canvas.width, canvas.height);
       return;
     }
-    const preset = options.preset;
     if (!imageField && !isProceduralPreset(preset)) return;
     if (!frame || glyphs.length === 0) return;
     const out = frame.data;
-    const [br, bg, bb] = options.light ? [250, 249, 246] : [8, 8, 11];
     new Uint32Array(out.buffer).fill(
       new Uint32Array(new Uint8ClampedArray([br, bg, bb, 255]).buffer)[0]!,
     );
@@ -281,6 +288,8 @@ export function createBackgroundRenderer(canvas: HTMLCanvasElement): BackgroundR
           r = imageField[i]!;
           g = imageField[i + 1]!;
           b = imageField[i + 2]!;
+        } else if (scene) {
+          [r, g, b] = sceneColor(scene, x, y, cols, rows, t);
         } else {
           [r, g, b] = presetColor(preset as ProceduralPreset, x / cols, y / rows, t);
         }

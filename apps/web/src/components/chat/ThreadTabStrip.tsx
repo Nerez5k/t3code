@@ -49,9 +49,10 @@ import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 const DRAG_MODIFIERS = [restrictToHorizontalAxis, restrictToFirstScrollableAncestor];
 
 const TAB_CLASS =
-  "group/tab relative flex h-7 max-w-52 min-w-24 shrink-0 cursor-pointer items-center gap-1.5 rounded-lg pr-1 pl-2.5 text-xs outline-none [-webkit-app-region:no-drag] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring";
-const TAB_IDLE = "text-muted-foreground hover:bg-accent/60 hover:text-foreground";
-const TAB_ACTIVE = "bg-accent text-foreground shadow-xs";
+  "group/tab relative flex h-8 w-52 min-w-28 shrink cursor-pointer items-center gap-2 rounded-lg pr-1.5 pl-3 text-sm outline-none transition-colors [-webkit-app-region:no-drag] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring";
+const TAB_IDLE = "text-muted-foreground hover:bg-foreground/5 hover:text-foreground";
+const TAB_ACTIVE =
+  "bg-foreground/8 text-foreground shadow-xs ring-1 ring-inset ring-foreground/10 backdrop-blur-sm";
 
 interface TabMenu {
   readonly items: readonly ContextMenuItem<`tab:${string}`>[];
@@ -181,9 +182,19 @@ export const ThreadTabStrip = memo(function ThreadTabStrip(props: {
         </SortableContext>
       </DndContext>
       {activeRef === null ? (
-        <div role="tab" aria-selected className={cn(TAB_CLASS, TAB_ACTIVE, "cursor-default")}>
-          <MessageSquarePlusIcon aria-hidden className="size-3.5 shrink-0" />
-          <span className="truncate">New thread</span>
+        <div role="tab" aria-selected data-thread-tab="draft" className={cn(TAB_CLASS, TAB_ACTIVE)}>
+          <MessageSquarePlusIcon aria-hidden className="size-4 shrink-0" />
+          <span className="min-w-0 flex-1 truncate">New thread</span>
+          {tabs.length > 0 ? (
+            <button
+              type="button"
+              aria-label="Close New thread"
+              onClick={() => goTo(tabs[tabs.length - 1]?.ref ?? null)}
+              className="flex size-5 shrink-0 cursor-pointer items-center justify-center rounded-md text-muted-foreground outline-none hover:bg-foreground/10 hover:text-foreground focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+            >
+              <XIcon className="size-3.5" />
+            </button>
+          ) : null}
         </div>
       ) : null}
       <Tooltip>
@@ -193,7 +204,7 @@ export const ThreadTabStrip = memo(function ThreadTabStrip(props: {
               type="button"
               aria-label="New thread"
               onClick={props.onNewThread}
-              className="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-lg text-muted-foreground outline-none [-webkit-app-region:no-drag] hover:bg-accent/60 hover:text-foreground focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+              className="flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-lg text-muted-foreground outline-none [-webkit-app-region:no-drag] hover:bg-accent/60 hover:text-foreground focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
             />
           }
         >
@@ -301,7 +312,7 @@ const ThreadTab = memo(function ThreadTab(props: {
         {working ? (
           <Spinner size="sm" aria-label="Working" />
         ) : project ? (
-          <ProjectFavicon project={project} className="size-3.5" />
+          <ProjectFavicon project={project} className="size-4" />
         ) : (
           <MessageSquarePlusIcon aria-hidden className="size-3.5" />
         )}
@@ -349,7 +360,7 @@ const ThreadTab = memo(function ThreadTab(props: {
           props.active ? "opacity-100" : "opacity-0 group-hover/tab:opacity-100",
         )}
       >
-        <XIcon className="size-3" />
+        <XIcon className="size-3.5" />
       </button>
     </div>
   );

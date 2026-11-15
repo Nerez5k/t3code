@@ -420,6 +420,23 @@ export const ClientSettingsSchema = Schema.Struct({
   ),
   backgroundShowInThreads: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(true))),
   backgroundAnimate: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(true))),
+  /** How the left sidebar shows what is behind it: an opaque panel, frosted glass, or clear. */
+  sidebarSurface: Schema.Literals(["solid", "glass", "clear"]).pipe(
+    Schema.withDecodingDefault(Effect.succeed("solid" as const)),
+  ),
+  /** Share of the sidebar colour kept over the background in glass and clear modes. */
+  sidebarTint: Schema.Number.pipe(
+    Schema.check(Schema.isBetween({ minimum: 0, maximum: 100 })),
+    Schema.withDecodingDefault(Effect.succeed(55)),
+  ),
+  sidebarGlow: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(false))),
+  sidebarGlowColor: Schema.String.check(Schema.isPattern(/^#[0-9a-fA-F]{6}$/)).pipe(
+    Schema.withDecodingDefault(Effect.succeed("#3b82f6")),
+  ),
+  sidebarGlowIntensity: Schema.Number.pipe(
+    Schema.check(Schema.isBetween({ minimum: 0, maximum: 100 })),
+    Schema.withDecodingDefault(Effect.succeed(70)),
+  ),
   notificationMode: NotificationMode.pipe(
     Schema.withDecodingDefault(Effect.succeed("off" as const)),
   ),
@@ -2059,6 +2076,15 @@ export const ClientSettingsPatch = Schema.Struct({
   ),
   backgroundShowInThreads: Schema.optionalKey(Schema.Boolean),
   backgroundAnimate: Schema.optionalKey(Schema.Boolean),
+  sidebarSurface: Schema.optionalKey(Schema.Literals(["solid", "glass", "clear"])),
+  sidebarTint: Schema.optionalKey(
+    Schema.Number.check(Schema.isBetween({ minimum: 0, maximum: 100 })),
+  ),
+  sidebarGlow: Schema.optionalKey(Schema.Boolean),
+  sidebarGlowColor: Schema.optionalKey(Schema.String.check(Schema.isPattern(/^#[0-9a-fA-F]{6}$/))),
+  sidebarGlowIntensity: Schema.optionalKey(
+    Schema.Number.check(Schema.isBetween({ minimum: 0, maximum: 100 })),
+  ),
   notificationMode: Schema.optionalKey(NotificationMode),
   inAppNotificationsEnabled: Schema.optionalKey(Schema.Boolean),
   diffColorScheme: Schema.optionalKey(DiffColorScheme),
