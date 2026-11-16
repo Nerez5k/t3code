@@ -1,15 +1,15 @@
 {
   "fill": {
-    "solid": "display-p3:0.00000,0.00000,0.00000,1.00000"
+    "solid": "display-p3:0.10200,0.10980,0.16470,1.00000"
   },
   "groups": [
     {
       "layers": [
         {
-          "image-name": "text.svg",
-          "name": "Text",
+          "image-name": "star.svg",
+          "name": "Star",
           "position": {
-            "scale": 8.5,
+            "scale": 6.2,
             "translation-in-points": [0, 0]
           }
         }

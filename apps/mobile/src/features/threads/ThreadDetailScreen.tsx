@@ -1,4 +1,5 @@
 import { ChildThreadApprovals } from "./ChildThreadApprovals";
+import { ChatBackdrop } from "../synthia/ChatBackdrop";
 import { useOpenThreadInspector } from "./thread-inspector-navigation";
 import { useSidebarWorkspaceTabs } from "../layout/workspace/useSystemWorkspaceTabBar";
 import { useWorkspaceTabs } from "../layout/workspace/WorkspaceTabsContext";
@@ -1449,6 +1450,7 @@ function ThreadDetailBody(
                 : "absolute inset-0 bg-screen"
             }
           />
+          <ChatBackdrop />
           <RenderErrorBoundary
             key={selectedThreadKey}
             resetKeys={[props.threadCwd]}
