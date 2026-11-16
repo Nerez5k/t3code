@@ -1,3 +1,6 @@
+import { useAtomValue } from "@effect/atom-react";
+import { AsyncResult } from "effect/reactivity";
+
 import { AppBar } from "../../components/ui/AppBar";
 import type { AppBarAction, AppBarMenu } from "../../components/ui/AppBar.types";
 import {
@@ -5,6 +8,7 @@ import {
   useWorkspacePaneState,
 } from "../layout/AdaptiveWorkspaceLayout";
 import type { ThreadInspectorMode } from "./thread-inspector-navigation";
+import { mobilePreferencesAtom } from "../../state/preferences";
 import { useWorkspaceBackNavigation } from "../layout/workspace/useAndroidWorkspaceNavigation";
 import {
   threadTerminalMenu,
@@ -40,7 +44,12 @@ export function ThreadHeader(props: {
         },
       ]
     : [];
-  const menus = [gitMenu, terminalMenu].filter((menu): menu is AppBarMenu => menu !== null);
+  const preferences = useAtomValue(mobilePreferencesAtom);
+  const showTools =
+    AsyncResult.isSuccess(preferences) && preferences.value.threadHeaderTools === true;
+  const menus = showTools
+    ? [gitMenu, terminalMenu].filter((menu): menu is AppBarMenu => menu !== null)
+    : [];
 
   return (
     <AppBar

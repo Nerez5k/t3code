@@ -130,6 +130,8 @@ export interface Preferences {
   readonly toolCallVisibility?: ToolCallVisibility;
   /** Synthia: the still dither scene behind threads, or "none". */
   readonly chatBackground?: string;
+  /** Synthia: Git and terminal menus in the thread header; hidden unless turned on. */
+  readonly threadHeaderTools?: boolean;
   readonly workingShelfEnabled?: boolean;
   readonly useLastProjectForNewThreads?: boolean;
   readonly lastThreadProject?: typeof ThreadProject.Type;
@@ -218,6 +220,7 @@ function sanitizePreferences(parsed: Preferences): Preferences {
     projectGroupingMode?: SidebarProjectGroupingMode;
     toolCallVisibility?: ToolCallVisibility;
     chatBackground?: string;
+    threadHeaderTools?: boolean;
     workingShelfEnabled?: boolean;
     useLastProjectForNewThreads?: boolean;
     lastThreadProject?: typeof ThreadProject.Type;
@@ -347,6 +350,9 @@ function sanitizePreferences(parsed: Preferences): Preferences {
   }
   if (typeof parsed.chatBackground === "string" && parsed.chatBackground.length <= 32) {
     preferences.chatBackground = parsed.chatBackground;
+  }
+  if (typeof parsed.threadHeaderTools === "boolean") {
+    preferences.threadHeaderTools = parsed.threadHeaderTools;
   }
   if (typeof parsed.workingShelfEnabled === "boolean") {
     preferences.workingShelfEnabled = parsed.workingShelfEnabled;

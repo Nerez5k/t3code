@@ -7,7 +7,7 @@ import type { ModelOption } from "../lib/modelOptions";
 import { resolveProviderOptionDescriptors } from "../lib/providerOptions";
 import { AppText as Text } from "./ui/AppText";
 import { ComposerInlineControl } from "./ComposerToolbar";
-import { ProviderIcon, ProviderInstanceIcon, providerInstanceNameLabel } from "./ProviderIcon";
+import { ProviderIcon, ProviderInstanceIcon } from "./ProviderIcon";
 
 export function ComposerModelControl(props: {
   readonly modelOption: ModelOption | null;
@@ -21,10 +21,12 @@ export function ComposerModelControl(props: {
   readonly iconOnly?: boolean;
   readonly onPress: () => void;
 }) {
+  // Synthia: the trigger reads like the desktop one, model and effort; the agent (Kiro "mode")
+  // stays in the settings sheet instead of crowding the composer.
   const descriptors = resolveProviderOptionDescriptors({
     capabilities: props.modelOption?.capabilities,
     selections: props.selection?.options,
-  });
+  }).filter((descriptor) => descriptor.id !== "mode");
   const promptTraits = getPromptControlledTraits(descriptors, props.prompt);
   const summary = props.provider
     ? buildTraitsTriggerDisplay({
@@ -37,14 +39,6 @@ export function ComposerModelControl(props: {
     : "";
   const badge = props.modelOption?.providerBadge;
   const label = props.modelOption?.label ?? props.selection?.model ?? "Choose model";
-  const providerNameLabel = badge
-    ? providerInstanceNameLabel({
-        provider: props.modelOption?.providerDriver,
-        iconUrl: props.modelOption?.providerIconUrl,
-        displayName: badge.displayName,
-        showBadge: badge.showBadge,
-      })
-    : null;
   const shortLabel = props.modelOption?.shortName ?? label;
   return (
     <ComposerInlineControl
@@ -78,24 +72,9 @@ export function ComposerModelControl(props: {
           />
         )
       }
-      label={providerNameLabel ?? shortLabel}
-      labelEllipsizeMode={providerNameLabel ? "middle" : undefined}
-      iconOnly={props.iconOnly}
-      suffixWidth={providerNameLabel ? 96 : undefined}
+      label={shortLabel}
       suffix={
-        providerNameLabel ? (
-          <Text
-            className={
-              props.size === "large"
-                ? "text-sm text-foreground-muted"
-                : "text-xs text-foreground-muted"
-            }
-            numberOfLines={1}
-          >
-            {shortLabel}
-            {summary ? ` · ${summary}` : ""}
-          </Text>
-        ) : summary ? (
+        summary ? (
           <Text
             className={
               props.size === "large"
