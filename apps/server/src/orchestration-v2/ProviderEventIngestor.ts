@@ -781,14 +781,18 @@ export const layer: Layer.Layer<
             effect.pipe(
               Effect.tap((storedEvents) =>
                 Effect.gen(function* () {
-                  if (storedEvents.length === 0 || input.event.type !== "turn.terminal") return;
+                  if (input.event.type !== "turn.terminal") return;
                   const limited =
-                    input.event.status === "failed" && input.event.failure.class === "usage_limit";
-                  const instance = yield* instances.getInstance(input.providerInstanceId);
+                    storedEvents.length > 0 &&
+                    input.event.status === "failed" &&
+                    input.event.failure.class === "usage_limit";
                   // Kiro reports credits only through a probe, so each finished turn refreshes them.
-                  const kiro = instance?.driverKind === "kiro";
+                  // A successful turn stores no events, so this must not wait for stored ones.
+                  const kiro = input.event.driver === "kiro";
+                  if (!limited && !kiro) return;
                   if (kiro) markKiroTurnFinished();
-                  if ((!limited && !kiro) || !instance?.snapshot.refreshUsage) return;
+                  const instance = yield* instances.getInstance(input.providerInstanceId);
+                  if (!instance?.snapshot.refreshUsage) return;
                   yield* instance.snapshot.refreshUsage.pipe(
                     Effect.ignoreCause({ log: true }),
                     Effect.forkIn(scope, { startImmediately: true }),

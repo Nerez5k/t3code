@@ -234,6 +234,84 @@ function threadCreatedEvent(
 
 const layer = it.layer(layerTest);
 
+it.effect("refreshes Kiro credits after a completed turn that stores no events", () =>
+  Effect.gen(function* () {
+    const refreshed = yield* Deferred.make<void>();
+    const adapter = yield* ProviderAdapter.ProviderAdapterV2.pipe(
+      Effect.provide(
+        Layer.mock(ProviderAdapter.ProviderAdapterV2)({
+          instanceId: ProviderInstanceId.make("kiro"),
+          driver: ProviderDriverKind.make("kiro"),
+        }),
+      ),
+    );
+    const instance: ProviderInstance = {
+      instanceId: ProviderInstanceId.make("kiro"),
+      driverKind: ProviderDriverKind.make("kiro"),
+      continuationIdentity: {
+        driverKind: ProviderDriverKind.make("kiro"),
+        continuationKey: "kiro",
+      },
+      enabled: true,
+      displayName: undefined,
+      orchestrationAdapter: adapter,
+      textGeneration: {
+        generateBranchName: () => Effect.die("unused"),
+        generateCommitMessage: () => Effect.die("unused"),
+        generatePrContent: () => Effect.die("unused"),
+        generateThreadTitle: () => Effect.die("unused"),
+        generateReviewGuide: () => Effect.die("unused"),
+        generateTranscriptionPostProcessing: () => Effect.die("unused"),
+      },
+      snapshot: {
+        refreshUsage: Deferred.succeed(refreshed, undefined).pipe(Effect.asVoid),
+        getSnapshot: Effect.die("unused"),
+        refresh: Effect.die("unused"),
+        resolveMaintenance: () => Effect.die("unused"),
+        applyUsageLimits: () => Effect.die("unused"),
+        streamChanges: Stream.empty,
+      },
+    };
+    const instances = Layer.mock(ProviderInstanceRegistry.ProviderInstanceRegistry)({
+      getInstance: (id) => Effect.succeed(id === instance.instanceId ? instance : undefined),
+    });
+    yield* Effect.gen(function* () {
+      const now = yield* DateTime.now;
+      const eventSink = yield* EventSink.EventSinkV2;
+      const ingestor = yield* ProviderEventIngestor.ProviderEventIngestorV2;
+      const idAllocator = yield* IdAllocator.IdAllocatorV2;
+      const threadEvent = yield* threadCreatedEvent(now);
+      yield* eventSink.write({ events: [threadEvent] });
+      const stored = yield* ingestor.ingestNormalized({
+        providerSessionId: yield* idAllocator.allocate.providerSession({
+          providerInstanceId: instance.instanceId,
+          threadId: threadEvent.threadId,
+        }),
+        providerInstanceId: instance.instanceId,
+        threadId: threadEvent.threadId,
+        event: {
+          type: "turn.terminal",
+          driver: instance.driverKind,
+          providerThreadId: idAllocator.derive.providerThread({
+            driver: instance.driverKind,
+            nativeThreadId: "kiro-thread",
+          }),
+          providerTurnId: idAllocator.derive.providerTurn({
+            driver: instance.driverKind,
+            nativeTurnId: "kiro-turn",
+          }),
+          runOrdinal: 1,
+          status: "completed",
+          threadDisposition: "reusable",
+        },
+      });
+      // A completed turn writes nothing; the refresh used to wait for stored events and never ran.
+      assert.equal(stored.length, 0);
+      yield* Deferred.await(refreshed);
+    }).pipe(Effect.provide(makeLayerTest(layerTestEventSink, instances)));
+  }),
+);
+
 it.effect("takes a hub's reset for an unreset usage_limit, then refreshes the snapshot", () =>
   Effect.gen(function* () {
     const refreshed = yield* Deferred.make<void>();

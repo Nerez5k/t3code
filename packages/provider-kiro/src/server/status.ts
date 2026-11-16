@@ -380,6 +380,8 @@ const probeKiroAgents = Effect.fn("KiroProvider.probeKiroAgents")(function* (
  * Credits from Kiro's `/usage`, which bills nothing. The command leaves a saved
  * session behind, so it is deleted right away.
  */
+const USAGE_PROBE_TIMEOUT_MS = 30_000;
+
 const probeKiroUsage = Effect.fn("KiroProvider.probeKiroUsage")(function* (
   settings: KiroSettings,
   environment: NodeJS.ProcessEnv,
@@ -392,8 +394,10 @@ const probeKiroUsage = Effect.fn("KiroProvider.probeKiroUsage")(function* (
   );
   const { text, sessionId } = kiroUsageFromStreamJson(output.stdout);
   if (sessionId !== undefined) {
+    // Cleanup runs on its own, so a slow delete never times out the credits read.
     yield* runKiroCli(settings, ["chat", "--delete-session", sessionId], environment).pipe(
       Effect.ignore,
+      Effect.forkDetach,
     );
   }
   return kiroUsageLimits(text, checkedAt);
@@ -495,11 +499,20 @@ export const checkKiroProviderStatus = Effect.fn("checkKiroProviderStatus")(func
               Effect.map(Option.getOrUndefined),
               Effect.orElseSucceed(() => undefined),
             ),
+            // `/usage` starts a full chat session; under load it needs longer than the auth probes,
+            // and a timeout here kept the previous credits on screen indefinitely.
             probeKiroUsage(settings, probeEnvironment, checkedAt).pipe(
               Effect.timeoutOption(
-                resolveProviderProbeTimeoutMs("kiro", AUTH_PROBE_TIMEOUT_MS, environment),
+                resolveProviderProbeTimeoutMs("kiro", USAGE_PROBE_TIMEOUT_MS, environment),
               ),
               Effect.map(Option.getOrUndefined),
+              Effect.tap((limits) =>
+                limits === undefined
+                  ? Effect.logWarning(
+                      "Kiro credits probe returned nothing; keeping the last value.",
+                    )
+                  : Effect.void,
+              ),
               Effect.orElseSucceed(() => undefined),
             ),
           ],
