@@ -262,11 +262,15 @@ const config: ExpoConfig = {
       isIosPersonalTeamBuild && repoEnv.T3CODE_APPLE_TEAM_ID?.trim()
         ? repoEnv.T3CODE_APPLE_TEAM_ID.trim()
         : "ARK85ZXQ4Z",
-    associatedDomains: [
-      `applinks:${variant.relyingParty}`,
-      `webcredentials:${variant.relyingParty}`,
-      `applinks:${HOSTED_APP_HOST}`,
-    ],
+    // The relying party's apple-app-site-association lists only T3's own team, so a
+    // reduced-capability build has no use for the entitlement (and its profile lacks it).
+    associatedDomains: isIosPersonalTeamBuild
+      ? []
+      : [
+          `applinks:${variant.relyingParty}`,
+          `webcredentials:${variant.relyingParty}`,
+          `applinks:${HOSTED_APP_HOST}`,
+        ],
     entitlements: {
       "keychain-access-groups": [`$(AppIdentifierPrefix)${iosBundleIdentifier}`],
     },
