@@ -117,7 +117,7 @@ export function OrchestrationSettings() {
             <ValueSelect
               label="Parallel delegates"
               value={config ? String(config.maxParallelDelegates) : undefined}
-              options={["1", "2", "3"]}
+              options={["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]}
               onChange={(value) => void save({ maxParallelDelegates: Number(value) })}
             />
           }

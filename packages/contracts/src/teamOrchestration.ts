@@ -11,7 +11,7 @@ export const TeamConfig = Schema.Struct({
   backendEffortHard: Schema.String,
   codexInstances: Schema.Array(Schema.String),
   limitThresholdPercent: Schema.Number.check(Schema.isBetween({ minimum: 1, maximum: 100 })),
-  maxParallelDelegates: Schema.Number.check(Schema.isBetween({ minimum: 1, maximum: 4 })),
+  maxParallelDelegates: Schema.Number.check(Schema.isBetween({ minimum: 1, maximum: 10 })),
   riskReview: Schema.Boolean,
 });
 export type TeamConfig = typeof TeamConfig.Type;
