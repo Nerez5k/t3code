@@ -17,7 +17,9 @@ import {
 
 import { cn } from "~/lib/utils";
 import { Button } from "../ui/button";
-import { usePullRequestsSupported } from "../../state/environments";
+import { useIssuesSupported, usePullRequestsSupported } from "../../state/environments";
+import { readIssueListPreferences } from "../issue/issueListPreferences";
+import { IssueGlyph } from "../issue/issuePresentation";
 import { PullRequestGlyph } from "../pullRequest/pullRequestIcons";
 import { readPullRequestListPreferences } from "../pullRequest/pullRequestListPreferences";
 import {
@@ -189,10 +191,13 @@ function SidebarPrimaryNav(props: {
   const { isMobile, setOpenMobile } = useSidebar();
   const pathname = useLocation({ select: (location) => location.pathname });
   const pullRequestsSupported = usePullRequestsSupported();
-  const go = (to: "/pull-requests" | "/usage") => {
+  const issuesSupported = useIssuesSupported();
+  const go = (to: "/pull-requests" | "/issues" | "/usage") => {
     if (isMobile) setOpenMobile(false);
     if (to === "/pull-requests") {
       void navigate({ to, search: readPullRequestListPreferences() });
+    } else if (to === "/issues") {
+      void navigate({ to, search: readIssueListPreferences() });
     } else {
       void navigate({ to });
     }
@@ -224,6 +229,17 @@ function SidebarPrimaryNav(props: {
           >
             <PullRequestGlyph.pullRequest />
             <span>Pull requests</span>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      ) : null}
+      {issuesSupported ? (
+        <SidebarMenuItem>
+          <SidebarMenuButton
+            onClick={() => go("/issues")}
+            isActive={pathname.startsWith("/issues")}
+          >
+            <IssueGlyph.issue />
+            <span>Issues</span>
           </SidebarMenuButton>
         </SidebarMenuItem>
       ) : null}
